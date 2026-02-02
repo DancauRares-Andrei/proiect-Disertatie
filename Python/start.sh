@@ -1,0 +1,2 @@
+./venv/bin/python client.py
+
