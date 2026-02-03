@@ -1,41 +1,56 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
+using SecureRiscVServer.Components.Crypto.AES;
 
-public class AesService
+namespace SecureRiscVServer.Components.Crypto
 {
-    public byte[] Encrypt(string plaintext, byte[] key, byte[] iv)
+    public class AesService
     {
-        using var aes = Aes.Create();
-        aes.Key = key;
-        aes.IV = iv;
+        // =========================
+        // Encrypt string (UTF-8)
+        // =========================
+        public byte[] Encrypt(string plaintext, byte[] key, byte[] iv)
+        {
+            if (plaintext == null)
+                throw new ArgumentNullException(nameof(plaintext));
 
-        using var encryptor = aes.CreateEncryptor();
-        var bytes = Encoding.UTF8.GetBytes(plaintext);
-        return encryptor.TransformFinalBlock(bytes, 0, bytes.Length);
-    }
-    // ✅ Pentru byte[]
-    public byte[] Encrypt(byte[] plainBytes, byte[] key, byte[] iv)
-    {
-        using var aes = Aes.Create();
-        aes.Key = key;
-        aes.IV = iv;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
+            var plainBytes = Encoding.UTF8.GetBytes(plaintext);
+            return Encrypt(plainBytes, key, iv);
+        }
 
-        using var encryptor = aes.CreateEncryptor();
-        return encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-    }
+        // =========================
+        // Encrypt byte[]
+        // =========================
+        public byte[] Encrypt(byte[] plainBytes, byte[] key, byte[] iv)
+        {
+            ValidateInputs(plainBytes, key, iv);
 
-    public byte[] Decrypt(byte[] cipherBytes, byte[] key, byte[] iv)
-    {
-        using var aes = Aes.Create();
-        aes.Key = key;
-        aes.IV = iv;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
+            // 🔐 AES-128-CBC manual
+            return AesCbc.Encrypt(plainBytes, key, iv);
+        }
 
-        using var decryptor = aes.CreateDecryptor();
-        return decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+        // =========================
+        // Decrypt byte[]
+        // =========================
+        /*public byte[] Decrypt(byte[] cipherBytes, byte[] key, byte[] iv)
+        {
+            ValidateInputs(cipherBytes, key, iv);
+
+            return AesCbc.Decrypt(cipherBytes, key, iv);
+        }*/
+
+        // =========================
+        // Input validation
+        // =========================
+        private static void ValidateInputs(byte[] data, byte[] key, byte[] iv)
+        {
+            if (data == null || data.Length == 0)
+                throw new ArgumentException("Data is empty");
+
+            if (key == null || key.Length != 16)
+                throw new ArgumentException("AES-128 key must be exactly 16 bytes");
+
+            if (iv == null || iv.Length != 16)
+                throw new ArgumentException("IV must be exactly 16 bytes");
+        }
     }
 }
-

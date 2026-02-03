@@ -4,8 +4,6 @@ namespace SecureRiscVServer.Components.Crypto
 {
     using System.Collections.Concurrent;
 
-    using System.Collections.Concurrent;
-
     public class SessionStore
     {
         private readonly ConcurrentDictionary<string, SecureSession> _sessions = new();
