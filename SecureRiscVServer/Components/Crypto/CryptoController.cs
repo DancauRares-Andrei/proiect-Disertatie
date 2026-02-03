@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Numerics;
 using System.Security.Claims;
+using System.Text;
 
 namespace SecureRiscVServer.Components.Crypto
 {
@@ -12,14 +13,15 @@ namespace SecureRiscVServer.Components.Crypto
         private readonly SessionStore _sessions;
         private readonly AesService _aes;
 
-        // o singură pereche RSA pentru server
         private static readonly RSA rsa = new();
 
         public CryptoController(SessionStore sessions, AesService aes)
         {
             _sessions = sessions;
             _aes = aes;
-            rsa.GenerateKeys(1024);
+
+            if (rsa.PublicKey.n == 0)
+                rsa.GenerateKeys(1024);
         }
 
         // ======================
@@ -43,57 +45,37 @@ namespace SecureRiscVServer.Components.Crypto
         [HttpPost("handshake")]
         public IActionResult Handshake([FromBody] HandshakeRequest request)
         {
-            if (request?.EncryptedKey == null || request.EncryptedKey.Count == 0)
-                return BadRequest("EncryptedKey missing");
+            if (request?.EncryptedKey == null || request.EncryptedKey.Count != 1)
+                return BadRequest("Expected single RSA block");
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
                 return Unauthorized();
 
-            // Converting to BigInteger
-            var cipher = request.EncryptedKey.ConvertAll(BigInteger.Parse);
-
-            Console.WriteLine("=== Handshake DEBUG ===");
-            Console.WriteLine("Cipher received:");
-            foreach (var c in cipher)
-                Console.WriteLine(c);
-
-            // Decrypt
-            byte[] decrypted = rsa.Decrypt(cipher[0]); // folosim primul BigInteger dacă trimitem ca un singur int
-
-            Console.WriteLine("Decrypted bytes length: " + decrypted.Length);
-            Console.WriteLine("Decrypted bytes: " + BitConverter.ToString(decrypted));
+            BigInteger c = BigInteger.Parse(request.EncryptedKey[0]);
+            byte[] decrypted = rsa.Decrypt(c);
 
             if (decrypted.Length < 48)
-                return BadRequest("Invalid key payload");
-
-            var aesKey = decrypted[..32];
-            var iv = decrypted[32..48];
-
-            Console.WriteLine("AES Key: " + BitConverter.ToString(aesKey));
-            Console.WriteLine("IV: " + BitConverter.ToString(iv));
+                return BadRequest("Invalid AES payload");
 
             var session = new SecureSession
             {
-                AesKey = aesKey,
-                Iv = iv
+                AesKey = decrypted[..32],
+                Iv = decrypted[32..48]
             };
 
             _sessions.Set(userId, session);
 
-            Console.WriteLine("Handshake completed for user: " + userId);
-            return Ok("Handshake completed");
+            Console.WriteLine($"[Handshake] OK for {userId}");
+            return Ok();
         }
 
-
-
-
         // ======================
-        // Send AES-encrypted data
+        // Send encrypted RISC-V instructions
         // ======================
         [Authorize]
-        [HttpPost("send")]
-        public IActionResult SendSecureMessage([FromBody] SecureMessageRequest request)
+        [HttpGet("next")]
+        public IActionResult GetNextInstruction()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
@@ -101,18 +83,30 @@ namespace SecureRiscVServer.Components.Crypto
 
             var session = _sessions.Get(userId);
             if (session == null)
-                return BadRequest("No AES session. Perform handshake first.");
+                return BadRequest("No AES session");
+
+            // 🔹 Instrucțiuni RISC-V (32-bit each)
+            uint[] instructions =
+            {
+                0x003100B3, // ADD x1, x2, x3
+                0x40428233, // SUB x4, x5, x6
+                0x00000073  // ECALL
+            };
+
+            byte[] payload = new byte[instructions.Length * 4];
+            for (int i = 0; i < instructions.Length; i++)
+            {
+                byte[] w = BitConverter.GetBytes(instructions[i]);
+                Array.Copy(w, 0, payload, i * 4, 4);
+            }
 
             byte[] encrypted = _aes.Encrypt(
-                request.PlainText,
+                payload,
                 session.AesKey,
                 session.Iv
             );
 
-            return Ok(new SecureMessageResponse
-            {
-                CipherText = Convert.ToBase64String(encrypted)
-            });
+            return Ok(Convert.ToBase64String(encrypted));
         }
     }
 }
