@@ -52,23 +52,33 @@ namespace SecureRiscVServer.Components.Crypto
             if (userId == null)
                 return Unauthorized();
 
+            // Parse single RSA block
             BigInteger c = BigInteger.Parse(request.EncryptedKey[0]);
-            byte[] decrypted = rsa.Decrypt(c);
 
-            if (decrypted.Length < 48)
+            // Decrypt RSA
+            byte[] decryptedFull = rsa.Decrypt(c); // de obicei 128 bytes pentru RSA-1024
+
+            // Luăm ultimii 32 bytes: 16 AES key + 16 IV
+            if (decryptedFull.Length < 32)
                 return BadRequest("Invalid AES payload");
+
+            byte[] decrypted = decryptedFull[^32..]; 
 
             var session = new SecureSession
             {
-                AesKey = decrypted[..32],
-                Iv = decrypted[32..48]
+                AesKey = decrypted[..16],  // primele 16 bytes → AES key
+                Iv     = decrypted[16..32] // următorii 16 bytes → IV
             };
 
             _sessions.Set(userId, session);
 
             Console.WriteLine($"[Handshake] OK for {userId}");
+            Console.WriteLine($"AES Key: {BitConverter.ToString(session.AesKey)}");
+            Console.WriteLine($"IV:      {BitConverter.ToString(session.Iv)}");
+
             return Ok();
         }
+
 
         // ======================
         // Send encrypted RISC-V instructions

@@ -12,7 +12,7 @@ SERVER = "http://localhost:5080"
 # ======================
 class AESClient:
     def __init__(self):
-        self.key = get_random_bytes(32)
+        self.key = get_random_bytes(16)
         self.iv = get_random_bytes(16)
 
     def decrypt(self, data: bytes):
