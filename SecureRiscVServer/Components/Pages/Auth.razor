@@ -1,10 +1,42 @@
-﻿@page "/auth"
-
+@page "/auth"
 @using Microsoft.AspNetCore.Authorization
-@using System.Net.Http.Json
-@inject HttpClient Http
-
 @attribute [Authorize]
+<script>
+async function sendInstructions() {
+    const textarea = document.getElementById('instr');
+    const statusEl = document.getElementById('status');
+
+    const instructions = textarea.value
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+    if (instructions.length === 0) {
+        statusEl.textContent = "❌ Please enter at least one instruction.";
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/crypto/instructions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ instructions: instructions })
+        });
+
+        if (response.ok) {
+            statusEl.textContent = "✅ Instructions sent successfully.";
+            textarea.value = "";
+        } else {
+            const text = await response.text();
+            statusEl.textContent = `❌ Failed to send instructions: ${text}`;
+        }
+    } catch (err) {
+        statusEl.textContent = "❌ Error sending instructions: " + err;
+    }
+}
+</script>
 
 <PageTitle>Auth</PageTitle>
 
@@ -18,49 +50,10 @@
 
 <h3>Send RISC-V Instructions</h3>
 
-<textarea @bind="instructionText"
-          rows="6"
-          cols="40"
-          placeholder="One instruction per line, e.g.&#10;0x003100B3">
-</textarea>
+<textarea id="instr" rows="6" cols="40"
+          placeholder="One instruction per line, e.g.&#10;0x003100B3"></textarea>
+<br><br>
+<button onclick="sendInstructions()">Send instructions</button>
+<p id="status" style="color: green"></p>
 
-<br />
-<br />
 
-<button @onclick="SendInstructions">
-    Send instructions
-</button>
-
-<p style="color: green">@status</p>
-
-@code {
-    private string instructionText = "";
-    private string status = "";
-
-    private async Task SendInstructions()
-    {
-        var instructions = instructionText
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToList();
-
-        var payload = new
-        {
-            instructions = instructions
-        };
-
-        var response = await Http.PostAsJsonAsync(
-            "/api/crypto/instructions",
-            payload
-        );
-
-        if (response.IsSuccessStatusCode)
-        {
-            status = "✅ Instructions sent successfully.";
-            instructionText = "";
-        }
-        else
-        {
-            status = "❌ Failed to send instructions.";
-        }
-    }
-}
