@@ -1,23 +1,10 @@
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
+from myAES import AESClient
 from Crypto.Util.Padding import pad, unpad
 import requests
 import base64
 import time
 
 SERVER = "http://localhost:5080"
-
-# ======================
-# AES
-# ======================
-class AESClient:
-    def __init__(self):
-        self.key = get_random_bytes(16)
-        self.iv = get_random_bytes(16)
-
-    def decrypt(self, data: bytes):
-        cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
-        return unpad(cipher.decrypt(data), 16)
 
 # ======================
 # RSA (manual)
