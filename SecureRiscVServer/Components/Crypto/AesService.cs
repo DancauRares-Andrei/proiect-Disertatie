@@ -3,7 +3,7 @@ using SecureRiscVServer.Components.Crypto.AES;
 
 namespace SecureRiscVServer.Components.Crypto
 {
-    public class AesService
+    public class AESService
     {
         // =========================
         // Encrypt string (UTF-8)
@@ -24,7 +24,6 @@ namespace SecureRiscVServer.Components.Crypto
         {
             ValidateInputs(plainBytes, key, iv);
 
-            // 🔐 AES-128-CBC manual
             return AesCbc.Encrypt(plainBytes, key, iv);
         }
 

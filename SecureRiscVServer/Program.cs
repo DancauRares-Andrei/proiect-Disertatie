@@ -41,6 +41,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddSingleton<InstructionQueue>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -49,8 +50,8 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 builder.Services.AddSingleton<SessionStore>();
-builder.Services.AddSingleton<AesService>();
-builder.Services.AddSingleton<RSA>();
+builder.Services.AddSingleton<AESService>();
+builder.Services.AddSingleton<RSAService>();
 
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");

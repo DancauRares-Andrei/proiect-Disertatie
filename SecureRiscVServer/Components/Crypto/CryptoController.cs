@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SecureRiscVServer.Data;
 using System.Numerics;
 using System.Security.Claims;
 using System.Text;
@@ -11,11 +12,11 @@ namespace SecureRiscVServer.Components.Crypto
     public class CryptoController : ControllerBase
     {
         private readonly SessionStore _sessions;
-        private readonly AesService _aes;
+        private readonly AESService _aes;
 
-        private static readonly RSA rsa = new();
+        private static readonly RSAService rsa = new();
 
-        public CryptoController(SessionStore sessions, AesService aes)
+        public CryptoController(SessionStore sessions, AESService aes)
         {
             _sessions = sessions;
             _aes = aes;
@@ -79,13 +80,42 @@ namespace SecureRiscVServer.Components.Crypto
             return Ok();
         }
 
+        [Authorize]
+        [HttpPost("instructions")]
+        public IActionResult UploadInstructions(
+            [FromBody] InstructionUploadRequest request,
+            [FromServices] InstructionQueue queue)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized();
 
-        // ======================
-        // Send encrypted RISC-V instructions
-        // ======================
+            var parsed = new List<uint>();
+
+            foreach (var s in request.Instructions)
+            {
+                if (!uint.TryParse(
+                    s.Replace("0x", ""),
+                    System.Globalization.NumberStyles.HexNumber,
+                    null,
+                    out var value))
+                {
+                    return BadRequest($"Invalid instruction: {s}");
+                }
+
+                parsed.Add(value);
+            }
+
+            queue.Enqueue(userId, parsed);
+
+            return Ok($"Queued {parsed.Count} instructions");
+        }
+
+
         [Authorize]
         [HttpGet("next")]
-        public IActionResult GetNextInstruction()
+        public IActionResult GetNextInstruction(
+    [FromServices] InstructionQueue queue)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
@@ -95,19 +125,17 @@ namespace SecureRiscVServer.Components.Crypto
             if (session == null)
                 return BadRequest("No AES session");
 
-            // 🔹 Instrucțiuni RISC-V (32-bit each)
-            uint[] instructions =
-            {
-                0x003100B3, // ADD x1, x2, x3
-                0x40428233, // SUB x4, x5, x6
-                0x00000073  // ECALL
-            };
+            uint[] instructions = queue.DequeueBatch(userId, max: 8);
+
+            if (instructions.Length == 0)
+                return NoContent(); // nimic de executat
 
             byte[] payload = new byte[instructions.Length * 4];
+
             for (int i = 0; i < instructions.Length; i++)
             {
-                byte[] w = BitConverter.GetBytes(instructions[i]);
-                Array.Copy(w, 0, payload, i * 4, 4);
+                var w = BitConverter.GetBytes(instructions[i]); // little-endian
+                Buffer.BlockCopy(w, 0, payload, i * 4, 4);
             }
 
             byte[] encrypted = _aes.Encrypt(
@@ -118,5 +146,6 @@ namespace SecureRiscVServer.Components.Crypto
 
             return Ok(Convert.ToBase64String(encrypted));
         }
+
     }
 }
