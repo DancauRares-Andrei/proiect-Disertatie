@@ -42,7 +42,7 @@ namespace SecureRiscVServer.Components.Crypto
         // ======================
         // Handshake RSA → AES
         // ======================
-        [Authorize]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [HttpPost("handshake")]
         public IActionResult Handshake([FromBody] HandshakeRequest request)
         {
@@ -112,7 +112,7 @@ namespace SecureRiscVServer.Components.Crypto
         }
 
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [HttpGet("next")]
         public IActionResult GetNextInstruction(
     [FromServices] InstructionQueue queue)

@@ -1,5 +1,4 @@
 from myAES import AESClient
-from Crypto.Util.Padding import pad, unpad
 import requests
 import base64
 import time
@@ -59,6 +58,13 @@ class SecureClient:
                 f"{SERVER}/api/crypto/next",
                 headers={"Authorization": f"Bearer {self.jwt}"}
             )
+
+            # 🔹 nimic de executat
+            if r.status_code == 204:
+                time.sleep(2)
+                continue
+
+            # 🔹 orice altă eroare reală
             r.raise_for_status()
 
             encrypted = base64.b64decode(r.text)
@@ -70,6 +76,7 @@ class SecureClient:
                 print(f"0x{word:08X}")
 
             time.sleep(2)
+
 
 # ======================
 # MAIN
@@ -83,5 +90,5 @@ client.login()
 rsa = client.get_rsa()
 client.handshake(rsa)
 
-print("🔐 Secure channel established.")
+print("Handshake complet!")
 client.loop()

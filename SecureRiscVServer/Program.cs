@@ -15,9 +15,10 @@ var jwtKey = builder.Configuration["Jwt:Key"];
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
 })
+.AddCookie(IdentityConstants.ApplicationScheme)
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -26,12 +27,31 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = false,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
 
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtKey)
-        )
+    // Nu redirecta la login, ci returnează 401
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = 401;
+            return Task.CompletedTask;
+        }
     };
 });
+
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ApiPolicy", policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+    });
+});
+
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -43,12 +63,6 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddSingleton<InstructionQueue>();
 
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
 builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddSingleton<AESService>();
 builder.Services.AddSingleton<RSAService>();
@@ -63,10 +77,9 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
-builder.Services.AddAuthentication();
-builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddHttpClient(); 
 
 var app = builder.Build();
 
