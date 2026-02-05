@@ -1,29 +1,16 @@
-@page "/auth"
+@page "/riscv"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
-
+<PageTitle>RISC-V</PageTitle>
 <script src="riscv.js"></script>
-
-<PageTitle>Auth</PageTitle>
-
-<h1>You are authenticated</h1>
-
-<AuthorizeView>
-    <p>Hello @context.User.Identity?.Name!</p>
-</AuthorizeView>
-
-<hr />
-
 <h3>Send full RISC-V program</h3>
 
 <textarea id="instr"
           rows="10"
           cols="50"
-          placeholder="One instruction per line (hex or decimal)
-Example:
-0x003100B3
-0x40428233
-0x00000073">
+          placeholder="O instructiune pe linie.
+Exemplu:
+addi a0, zero, 5">
 </textarea>
 
 <br /><br />
