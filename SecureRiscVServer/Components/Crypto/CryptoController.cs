@@ -14,14 +14,15 @@ namespace SecureRiscVServer.Components.Crypto
     {
         private readonly SessionStore _sessions;
         private readonly AESService _aes;
+        private readonly InstructionQueue _instructionQueue;
 
         private static readonly RSAService rsa = new();
 
-        public CryptoController(SessionStore sessions, AESService aes)
+        public CryptoController(SessionStore sessions, AESService aes, InstructionQueue instructionQueue)
         {
             _sessions = sessions;
             _aes = aes;
-
+            _instructionQueue = instructionQueue;
             if (rsa.PublicKey.n == 0)
                 rsa.GenerateKeys(1024);
         }
@@ -114,9 +115,8 @@ namespace SecureRiscVServer.Components.Crypto
 
 
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        [HttpGet("next")]
-        public IActionResult GetNextInstruction(
-    [FromServices] InstructionQueue queue)
+        [HttpGet("program")]
+        public IActionResult GetProgram()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
@@ -126,27 +126,62 @@ namespace SecureRiscVServer.Components.Crypto
             if (session == null)
                 return BadRequest("No AES session");
 
-            uint[] instructions = queue.DequeueBatch(userId, max: 8);
+            var instructions = _instructionQueue.GetAll(userId); // List<uint>
 
-            if (instructions.Length == 0)
-                return NoContent(); // nimic de executat
+            if (instructions.Count() == 0)
+                return NoContent();
 
-            byte[] payload = new byte[instructions.Length * 4];
-
-            for (int i = 0; i < instructions.Length; i++)
+            byte[] payload = new byte[instructions.Count() * 4];
+            for (int i = 0; i < instructions.Count(); i++)
             {
-                var w = BitConverter.GetBytes(instructions[i]); // little-endian
-                Buffer.BlockCopy(w, 0, payload, i * 4, 4);
+                Array.Copy(
+                    BitConverter.GetBytes(instructions[i]),
+                    0,
+                    payload,
+                    i * 4,
+                    4
+                );
             }
 
-            byte[] encrypted = _aes.Encrypt(
-                payload,
-                session.AesKey,
-                session.Iv
-            );
-
+            byte[] encrypted = _aes.Encrypt(payload, session.AesKey, session.Iv);
+            _instructionQueue.Clear(userId);
             return Ok(Convert.ToBase64String(encrypted));
         }
+        
+        [Authorize]
+        [HttpPost("program")]
+        public IActionResult PostProgram([FromBody] InstructionUploadRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized();
+
+            if (request?.Instructions == null || request.Instructions.Count == 0)
+                return BadRequest("No instructions provided");
+
+            var parsed = new List<uint>();
+
+            foreach (var s in request.Instructions)
+            {
+                // acceptă: 0x003100B3 sau 003100B3
+                var clean = s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+                    ? s[2..]
+                    : s;
+
+                if (!uint.TryParse(clean, System.Globalization.NumberStyles.HexNumber,
+                                   null, out var value))
+                {
+                    return BadRequest($"Invalid instruction: {s}");
+                }
+
+                parsed.Add(value);
+            }
+
+            _instructionQueue.Enqueue(userId, parsed);
+
+            return Ok();
+        }
+
 
     }
 }

@@ -1,42 +1,8 @@
 @page "/auth"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
-<script>
-async function sendInstructions() {
-    const textarea = document.getElementById('instr');
-    const statusEl = document.getElementById('status');
 
-    const instructions = textarea.value
-        .split('\n')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-
-    if (instructions.length === 0) {
-        statusEl.textContent = "❌ Please enter at least one instruction.";
-        return;
-    }
-
-    try {
-        const response = await fetch("/api/crypto/instructions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ instructions: instructions })
-        });
-
-        if (response.ok) {
-            statusEl.textContent = "✅ Instructions sent successfully.";
-            textarea.value = "";
-        } else {
-            const text = await response.text();
-            statusEl.textContent = `❌ Failed to send instructions: ${text}`;
-        }
-    } catch (err) {
-        statusEl.textContent = "❌ Error sending instructions: " + err;
-    }
-}
-</script>
+<script src="riscv.js"></script>
 
 <PageTitle>Auth</PageTitle>
 
@@ -48,12 +14,23 @@ async function sendInstructions() {
 
 <hr />
 
-<h3>Send RISC-V Instructions</h3>
+<h3>Send full RISC-V program</h3>
 
-<textarea id="instr" rows="6" cols="40"
-          placeholder="One instruction per line, e.g.&#10;0x003100B3"></textarea>
-<br><br>
-<button onclick="sendInstructions()">Send instructions</button>
+<textarea id="instr"
+          rows="10"
+          cols="50"
+          placeholder="One instruction per line (hex or decimal)
+Example:
+0x003100B3
+0x40428233
+0x00000073">
+</textarea>
+
+<br /><br />
+
+<button onclick="sendInstructions()">
+    Send program
+</button>
+
 <p id="status" style="color: green"></p>
-
 

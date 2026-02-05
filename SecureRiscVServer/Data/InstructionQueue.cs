@@ -26,6 +26,20 @@
 
             return list.ToArray();
         }
+
+        public List<uint> GetAll(string userId)
+        {
+            if (!_queues.ContainsKey(userId))
+                return new List<uint>();
+
+            return _queues[userId].ToList();
+        }
+        
+        public void Clear(string userId)
+        {
+            if (_queues.ContainsKey(userId))
+                _queues[userId].Clear();
+        }
     }
 
 }

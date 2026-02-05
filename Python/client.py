@@ -55,7 +55,7 @@ class SecureClient:
     def loop(self):
         while True:
             r = requests.get(
-                f"{SERVER}/api/crypto/next",
+                f"{SERVER}/api/crypto/program",
                 headers={"Authorization": f"Bearer {self.jwt}"}
             )
 
