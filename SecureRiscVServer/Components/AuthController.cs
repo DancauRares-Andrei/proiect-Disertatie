@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using SecureRiscVServer.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace SecureRiscVServer.Components
 {
@@ -12,39 +12,33 @@ namespace SecureRiscVServer.Components
     [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ApplicationDbContext _db;
         private readonly IConfiguration _config;
 
-        public AuthController(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            IConfiguration config)
+        public AuthController(ApplicationDbContext db, IConfiguration config)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
+            _db = db;
             _config = config;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _userManager.FindByEmailAsync(request.Username);
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.Username == request.Username);
+
             if (user == null)
                 return Unauthorized("User not found");
 
-            var result = await _signInManager.CheckPasswordSignInAsync(
-                user, request.Password, lockoutOnFailure: false);
-
-            if (!result.Succeeded)
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return Unauthorized("Invalid credentials");
 
-            // JWT
+            // Crează claims pentru JWT
             var claims = new[]
             {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email!)
-        };
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username)
+            };
 
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)

@@ -82,7 +82,7 @@ class SecureClient:
 # MAIN
 # ======================
 client = SecureClient(
-    "rares.dancau24@student.ub.ro",
+    "admin",
     "2F7NJdA85qw_BXV"
 )
 

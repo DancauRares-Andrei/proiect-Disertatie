@@ -44,7 +44,7 @@ namespace SecureRiscVServer.Components.Crypto
         // ======================
         // Handshake RSA → AES
         // ======================
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [Authorize]
         [HttpPost("handshake")]
         public IActionResult Handshake([FromBody] HandshakeRequest request)
         {
@@ -114,7 +114,7 @@ namespace SecureRiscVServer.Components.Crypto
         }
 
 
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [Authorize]
         [HttpGet("program")]
         public IActionResult GetProgram()
         {
@@ -126,7 +126,7 @@ namespace SecureRiscVServer.Components.Crypto
             if (session == null)
                 return BadRequest("No AES session");
 
-            var instructions = _instructionQueue.GetAll(userId); // List<uint>
+            var instructions = _instructionQueue.GetAll(userId);
 
             if (instructions.Count() == 0)
                 return NoContent();
@@ -163,7 +163,6 @@ namespace SecureRiscVServer.Components.Crypto
 
             foreach (var s in request.Instructions)
             {
-                // acceptă: 0x003100B3 sau 003100B3
                 var clean = s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
                     ? s[2..]
                     : s;

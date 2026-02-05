@@ -1,10 +1,13 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 
 namespace SecureRiscVServer.Data
 {
-    // Add profile data for application users by adding properties to the ApplicationUser class
-    public class ApplicationUser : IdentityUser
+    // Entitatea simplificată pentru utilizator
+    public class ApplicationUser
     {
+        public int Id { get; set; }                // Primary Key
+        public string Username { get; set; } = null!;
+        public string PasswordHash { get; set; } = null!;
+        // Poți adăuga câmpuri suplimentare după nevoie
     }
-
 }
