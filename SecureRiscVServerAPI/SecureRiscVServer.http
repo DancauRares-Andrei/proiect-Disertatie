@@ -1,0 +1,6 @@
+@SecureRiscVServer_HostAddress = http://localhost:5213
+
+GET {{SecureRiscVServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
