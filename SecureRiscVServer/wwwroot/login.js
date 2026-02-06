@@ -24,13 +24,13 @@
         });
 
         if (!response.ok) {
-            errorBox.textContent = "Invalid credentials";
+            errorBox.textContent = "Utilizator sau parola incorecta!";
             errorBox.classList.remove("d-none");
             return;
         }
 
         const data = await response.json();
-        sessionStorage.setItem("jwtToken", data.token);
+        sessionStorage.setItem("token", data.token);
         window.location.href = "/";
     });
 };

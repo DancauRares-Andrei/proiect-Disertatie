@@ -1,6 +1,6 @@
-﻿using static SecureRiscVServer.Components.Crypto.AES.AesTables;
+﻿using static SecureRiscVServer.Service.AES.AesTables;
 
-namespace SecureRiscVServer.Components.Crypto.AES
+namespace SecureRiscVServer.Service.AES
 {
     public class Aes128
     {

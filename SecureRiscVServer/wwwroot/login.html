@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8" />
+    <title>Log in</title>
+
+    <script src="login.js"></script>
+</head>
+<body>
+
+    <h1>Log in</h1>
+
+    <div>
+        <div>
+            <form id="loginForm">
+                <div>
+                    <input id="username" />
+                    <label for="username">Username</label>
+                </div>
+
+                <div>
+                    <input id="password" type="password" />
+                    <label for="password">Password</label>
+                </div>
+
+                <button type="submit">
+                    Log in
+                </button>
+
+                <div id="error"></div>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof initLoginForm === "function") {
+                initLoginForm();
+            } else {
+                console.error("initLoginForm nu este definit");
+            }
+        });
+    </script>
+</body>
+</html>

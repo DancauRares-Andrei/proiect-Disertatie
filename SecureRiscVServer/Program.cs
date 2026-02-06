@@ -1,15 +1,21 @@
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Session;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using SecureRiscVServer.Components;
-using SecureRiscVServer.Components.Crypto;
 using SecureRiscVServer.Data;
-using System.Text;
+using SecureRiscVServer.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var jwtKey = builder.Configuration["Jwt:Key"];
+
+// Add services to the container.
+
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // ==========================
 // Authentication & JWT
@@ -30,7 +36,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 
-    // Nu redirecta la login, ci returnează 401
+    // Nu redirecta la login, ci returneaz� 401
     options.Events = new JwtBearerEvents
     {
         OnChallenge = context =>
@@ -54,59 +60,34 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-// ==========================
-// Blazor Server / Razor Components
-// ==========================
-builder.Services.AddRazorComponents()
-       .AddInteractiveServerComponents();
-
-// Dacă vrei, poți folosi un AuthenticationStateProvider custom pe baza JWT
-//builder.Services.AddScoped<AuthenticationStateProvider, JwtAuthenticationStateProvider>();
-
-// ==========================
-// Servicii aplicație
-// ==========================
 builder.Services.AddSingleton<InstructionQueue>();
 builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddSingleton<AESService>();
 builder.Services.AddSingleton<RSAService>();
 
-// ==========================
-// Database (fără Identity)
-// ==========================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 
-builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// ==========================
-// Middleware pipeline
-// ==========================
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseMigrationsEndPoint();
-}
-else
-{
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseAntiforgery();
 
-// JWT Authentication
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Blazor Server endpoints
 app.MapControllers();
-app.MapRazorComponents<App>()
-   .AddInteractiveServerRenderMode();
 
 app.Run();

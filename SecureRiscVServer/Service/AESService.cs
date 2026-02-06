@@ -1,7 +1,7 @@
 ﻿using System.Text;
-using SecureRiscVServer.Components.Crypto.AES;
+using SecureRiscVServer.Service.AES;
 
-namespace SecureRiscVServer.Components.Crypto
+namespace SecureRiscVServer.Service
 {
     public class AESService
     {

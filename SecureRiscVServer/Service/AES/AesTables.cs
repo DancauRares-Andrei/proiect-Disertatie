@@ -1,4 +1,4 @@
-﻿namespace SecureRiscVServer.Components.Crypto.AES
+﻿namespace SecureRiscVServer.Service.AES
 {
     public static class AesTables
     {

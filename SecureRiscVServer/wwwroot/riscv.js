@@ -244,11 +244,12 @@ async function sendInstructions() {
 
     // terminator (ECALL sau marker)
     machine.push("0xFFFFFFFF");
-
+    const token = sessionStorage.getItem("token");
     const response = await fetch("/api/crypto/program", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
         },
         body: JSON.stringify({
             instructions: machine

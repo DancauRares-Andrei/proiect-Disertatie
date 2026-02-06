@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 
 namespace SecureRiscVServer.Data
 {
-    using System.Collections.Concurrent;
-
     public class SessionStore
     {
         private readonly ConcurrentDictionary<string, SecureSession> _sessions = new();

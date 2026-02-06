@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8" />
+    <title>RISC-V</title>
+</head>
+<body>
+
+    <h3>Send full RISC-V program</h3>
+
+    <textarea id="instr"
+              rows="10"
+              cols="50"
+              placeholder="O instructiune pe linie.
+Exemplu:
+addi a0, zero, 5"></textarea>
+
+    <br /><br />
+
+    <button id="sendBtn">
+        Send program
+    </button>
+
+    <p id="status" style="color: green"></p>
+
+    <script src="riscv.js"></script>
+
+    <script>
+        // Echivalentul lui [Authorize]
+        document.addEventListener("DOMContentLoaded", () => {
+            const token = sessionStorage.getItem("token");
+
+            if (!token) {
+                // nu e autentificat → redirect la login
+                window.location.href = "/login.html";
+                return;
+            }
+
+            // optional: atașăm handlerul JS aici
+            document
+                .getElementById("sendBtn")
+                .addEventListener("click", sendInstructions);
+        });
+    </script>
+
+</body>
+</html>

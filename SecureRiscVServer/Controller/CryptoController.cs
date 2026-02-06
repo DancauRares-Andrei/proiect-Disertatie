@@ -2,11 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecureRiscVServer.Data;
+using SecureRiscVServer.Service;
 using System.Numerics;
 using System.Security.Claims;
 using System.Text;
 
-namespace SecureRiscVServer.Components.Crypto
+namespace SecureRiscVServer.Controller
 {
     [ApiController]
     [Route("api/crypto")]
@@ -65,12 +66,12 @@ namespace SecureRiscVServer.Components.Crypto
             if (decryptedFull.Length < 32)
                 return BadRequest("Invalid AES payload");
 
-            byte[] decrypted = decryptedFull[^32..]; 
+            byte[] decrypted = decryptedFull[^32..];
 
             var session = new SecureSession
             {
                 AesKey = decrypted[..16],  // primele 16 bytes → AES key
-                Iv     = decrypted[16..32] // următorii 16 bytes → IV
+                Iv = decrypted[16..32] // următorii 16 bytes → IV
             };
 
             _sessions.Set(userId, session);
@@ -128,11 +129,11 @@ namespace SecureRiscVServer.Components.Crypto
 
             var instructions = _instructionQueue.GetAll(userId);
 
-            if (instructions.Count() == 0)
+            if (instructions.Count == 0)
                 return NoContent();
 
-            byte[] payload = new byte[instructions.Count() * 4];
-            for (int i = 0; i < instructions.Count(); i++)
+            byte[] payload = new byte[instructions.Count * 4];
+            for (int i = 0; i < instructions.Count; i++)
             {
                 Array.Copy(
                     BitConverter.GetBytes(instructions[i]),
@@ -147,7 +148,7 @@ namespace SecureRiscVServer.Components.Crypto
             _instructionQueue.Clear(userId);
             return Ok(Convert.ToBase64String(encrypted));
         }
-        
+
         [Authorize]
         [HttpPost("program")]
         public IActionResult PostProgram([FromBody] InstructionUploadRequest request)

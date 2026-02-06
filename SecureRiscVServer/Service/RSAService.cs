@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Collections.Generic;
 
-namespace SecureRiscVServer.Components.Crypto
+namespace SecureRiscVServer.Service
 {
     public class RSAService
     {
@@ -62,7 +62,7 @@ namespace SecureRiscVServer.Components.Crypto
         {
             if (a == 0) return (b, 0, 1);
             var (g, x1, y1) = ExtendedGcd(b % a, a);
-            return (g, y1 - (b / a) * x1, x1);
+            return (g, y1 - b / a * x1, x1);
         }
 
         private static BigInteger GeneratePrime(int bits)

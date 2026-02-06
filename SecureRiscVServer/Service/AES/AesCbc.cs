@@ -1,4 +1,4 @@
-﻿namespace SecureRiscVServer.Components.Crypto.AES
+﻿namespace SecureRiscVServer.Service.AES
 {
     public static class AesCbc
     {
@@ -26,7 +26,7 @@
 
         private static byte[] Pad(byte[] data)
         {
-            int pad = 16 - (data.Length % 16);
+            int pad = 16 - data.Length % 16;
             return data.Concat(Enumerable.Repeat((byte)pad, pad)).ToArray();
         }
 
