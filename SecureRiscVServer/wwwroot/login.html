@@ -1,38 +1,75 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="utf-8" />
-    <title>Log in</title>
-
-    <script src="login.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autentificare - Transmisie Securizată RISC-V</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/login.js"></script>
 </head>
 <body>
+    <nav>
+        <ul id="menuItems">
+            <li><a href="index.html">Acasă</a></li>
+            <li id="loginMenuItem"><a href="login.html" class="active">Autentificare</a></li>
+            <li id="riscvMenuItem" style="display: none;"><a href="riscv.html">RISC-V</a></li>
+            <li id="logoutMenuItem" style="display: none;"><a href="#" id="logoutLink">Deconectare</a></li>
+        </ul>
+    </nav>
 
-    <h1>Log in</h1>
-
-    <div>
-        <div>
+    <div class="container">
+        <h1>Autentificare</h1>
+        
+        <div class="form-container">
             <form id="loginForm">
-                <div>
-                    <input id="username" />
-                    <label for="username">Username</label>
+                <div class="form-group">
+                    <label for="username">Nume utilizator</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required 
+                        placeholder="Introduceți numele de utilizator"
+                    />
                 </div>
-
-                <div>
-                    <input id="password" type="password" />
-                    <label for="password">Password</label>
+                
+                <div class="form-group">
+                    <label for="password">Parolă</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        placeholder="Introduceți parola"
+                    />
                 </div>
-
+                
                 <button type="submit">
-                    Log in
+                    Autentificare
                 </button>
-
-                <div id="error"></div>
+                
+                <div id="error" class="error" style="display: none;"></div>
             </form>
         </div>
     </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            // Verificăm dacă utilizatorul este deja autentificat
+            const token = sessionStorage.getItem("token");
+            
+            if (token) {
+                // Dacă e deja autentificat, redirecționăm la RISC-V
+                window.location.href = "riscv.html";
+                return;
+            }
+
+            // Actualizăm meniul
+            document.getElementById("loginMenuItem").style.display = "block";
+            document.getElementById("riscvMenuItem").style.display = "none";
+            document.getElementById("logoutMenuItem").style.display = "none";
+
+            // Inițializăm formularul de login
             if (typeof initLoginForm === "function") {
                 initLoginForm();
             } else {

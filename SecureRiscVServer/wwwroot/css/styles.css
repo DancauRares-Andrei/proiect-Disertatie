@@ -1,0 +1,476 @@
+/* Stiluri generale - Tematică Electronică/Embedded */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Paletă de culori inspirată din electronica embedded */
+    --primary-dark: #1a1f2e;      /* Fundal principal - PCB dark */
+    --secondary-dark: #252b3b;    /* Container background */
+    --accent-blue: #2e5c8a;       /* Albastru electronic */
+    --accent-cyan: #4a9eff;       /* Accent luminos */
+    --led-green: #00ff88;         /* Verde LED activ */
+    --led-orange: #ff6b35;        /* Portocaliu semnal */
+    --text-light: #e0e6ed;        /* Text principal */
+    --text-muted: #8b95a5;        /* Text secundar */
+    --border-color: #3d4557;      /* Borduri subtile */
+    --error-red: #ff4757;         /* Eroare */
+    --success-green: #00d9a3;     /* Succes */
+}
+
+body {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    line-height: 1.6;
+    color: var(--text-light);
+    background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #1e2330 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Efect de circuit board în fundal */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(90deg, rgba(78, 158, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(rgba(78, 158, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Meniu de navigare */
+nav {
+    background: linear-gradient(180deg, rgba(37, 43, 59, 0.95) 0%, rgba(26, 31, 46, 0.95) 100%);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 20px rgba(0, 255, 136, 0.1);
+    border-bottom: 2px solid var(--accent-blue);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+nav li {
+    margin: 0;
+    position: relative;
+}
+
+/* Efect de LED pe hover */
+nav li::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--led-green);
+    transform: translateX(-50%);
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px var(--led-green);
+}
+
+nav li:hover::after {
+    width: 80%;
+}
+
+nav a {
+    display: block;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+nav a:hover {
+    background: linear-gradient(180deg, rgba(46, 92, 138, 0.3) 0%, rgba(74, 158, 255, 0.2) 100%);
+    color: var(--led-green);
+}
+
+nav a.active {
+    color: var(--accent-cyan);
+    border-bottom-color: var(--accent-cyan);
+    background: rgba(46, 92, 138, 0.2);
+}
+
+/* Container principal */
+.container {
+    max-width: 1200px;
+    margin: 2.5rem auto;
+    padding: 2.5rem;
+    background: linear-gradient(135deg, rgba(37, 43, 59, 0.9) 0%, rgba(26, 31, 46, 0.85) 100%);
+    backdrop-filter: blur(15px);
+    border-radius: 12px;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(78, 158, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+}
+
+/* Accent de lumină pe colț - efect PCB */
+.container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle at top right, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* Titluri */
+h1 {
+    color: var(--led-green);
+    margin-bottom: 1.5rem;
+    font-size: 2.5rem;
+    text-align: center;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+}
+
+h2 {
+    color: var(--accent-cyan);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-left: 4px solid var(--accent-cyan);
+    padding-left: 1rem;
+}
+
+h3 {
+    color: var(--accent-cyan);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Paragrafe */
+p {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+/* Formulare */
+.form-container {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2.5rem;
+    background: rgba(26, 31, 46, 0.6);
+    border-radius: 10px;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.6rem;
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    background: rgba(15, 20, 25, 0.8);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 1rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+    transition: all 0.3s ease;
+}
+
+.form-group input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--accent-cyan);
+    background: rgba(15, 20, 25, 0.95);
+    box-shadow: 
+        0 0 0 3px rgba(74, 158, 255, 0.1),
+        0 0 15px rgba(74, 158, 255, 0.2);
+}
+
+/* Butoane */
+button, .btn {
+    background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+    color: var(--text-light);
+    padding: 0.9rem 2.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 
+        0 4px 15px rgba(74, 158, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Select dropdown */
+select {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    background: rgba(15, 20, 25, 0.8);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 1rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a9eff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.2em;
+    padding-right: 3rem;
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--accent-cyan);
+    background-color: rgba(15, 20, 25, 0.95);
+    box-shadow: 
+        0 0 0 3px rgba(74, 158, 255, 0.1),
+        0 0 15px rgba(74, 158, 255, 0.2);
+}
+
+select option {
+    background-color: var(--primary-dark);
+    color: var(--text-light);
+    padding: 0.5rem;
+}
+
+select:hover {
+    border-color: var(--accent-cyan);
+}
+
+/* Efect de "pulse" pentru buton */
+button::before, .btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+button:hover::before, .btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+button:hover, .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 20px rgba(74, 158, 255, 0.4),
+        0 0 30px rgba(0, 255, 136, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+button:active, .btn:active {
+    transform: translateY(0);
+}
+
+/* Textarea pentru cod RISC-V */
+textarea {
+    width: 100%;
+    padding: 1rem;
+    background: rgba(15, 20, 25, 0.9);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--led-green);
+    font-size: 0.95rem;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    resize: vertical;
+    transition: all 0.3s ease;
+    line-height: 1.5;
+}
+
+textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--led-green);
+    background: rgba(15, 20, 25, 0.95);
+    box-shadow: 
+        0 0 0 3px rgba(0, 255, 136, 0.1),
+        0 0 20px rgba(0, 255, 136, 0.2);
+}
+
+/* Mesaje de eroare */
+.error {
+    color: var(--text-light);
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.2) 0%, rgba(255, 71, 87, 0.1) 100%);
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    border-left: 4px solid var(--error-red);
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.2);
+    font-weight: 500;
+}
+
+/* Mesaje de status */
+.status {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
+}
+
+.status.success {
+    color: var(--text-light);
+    background: linear-gradient(135deg, rgba(0, 217, 163, 0.2) 0%, rgba(0, 255, 136, 0.1) 100%);
+    border-left: 4px solid var(--success-green);
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
+}
+
+.status.error {
+    color: var(--text-light);
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.2) 0%, rgba(255, 71, 87, 0.1) 100%);
+    border-left: 4px solid var(--error-red);
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.2);
+}
+
+/* Efect de glow pentru LED-uri (doar decorativ) */
+@keyframes led-pulse {
+    0%, 100% {
+        opacity: 1;
+        text-shadow: 0 0 20px currentColor;
+    }
+    50% {
+        opacity: 0.8;
+        text-shadow: 0 0 30px currentColor;
+    }
+}
+
+h1 {
+    animation: led-pulse 3s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    nav ul {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    nav a {
+        text-align: center;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    nav li::after {
+        display: none;
+    }
+    
+    .container {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    .form-container {
+        padding: 1.5rem;
+    }
+}
+
+/* Scrollbar personalizat */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--primary-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--accent-blue);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-cyan);
+}
+
+/* Selection text */
+::selection {
+    background: var(--accent-cyan);
+    color: var(--primary-dark);
+}
+
+::-moz-selection {
+    background: var(--accent-cyan);
+    color: var(--primary-dark);
+}

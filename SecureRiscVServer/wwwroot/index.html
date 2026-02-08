@@ -1,11 +1,55 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="ro">
 <head>
     <meta charset="utf-8" />
-    <title>Acasa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acasă - Transmisie Securizată RISC-V</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <h1>Salut, lume!</h1>
-    <p>Bine ai venit in aplicatie!</p>
+    <nav>
+        <ul id="menuItems">
+            <li><a href="index.html" class="active">Acasă</a></li>
+            <li id="loginMenuItem"><a href="login.html">Autentificare</a></li>
+            <li id="riscvMenuItem" style="display: none;"><a href="riscv.html">RISC-V</a></li>
+            <li id="logoutMenuItem" style="display: none;"><a href="#" id="logoutLink">Deconectare</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1>Bine ai venit!</h1>
+        <p>Această aplicație permite transmiterea securizată a instrucțiunilor RISC-V din browser către client.</p>
+        <p>Pentru a începe, te rugăm să te autentifici folosind butonul din meniul de navigare.</p>
+        
+        <h2>Despre proiect</h2>
+        <p>Acest proiect demonstrează un sistem sigur de comunicare pentru trimiterea de programe RISC-V către dispozitive client. 
+        Utilizează autentificare bazată pe token pentru a asigura securitatea transmisiei.</p>
+    </div>
+
+    <script>
+        // Verificăm dacă utilizatorul este autentificat
+        document.addEventListener("DOMContentLoaded", () => {
+            const token = sessionStorage.getItem("token");
+            
+            if (token) {
+                // Utilizator autentificat - ascundem login, arătăm RISC-V și logout
+                document.getElementById("loginMenuItem").style.display = "none";
+                document.getElementById("riscvMenuItem").style.display = "block";
+                document.getElementById("logoutMenuItem").style.display = "block";
+            } else {
+                // Utilizator neautentificat - arătăm login, ascundem RISC-V și logout
+                document.getElementById("loginMenuItem").style.display = "block";
+                document.getElementById("riscvMenuItem").style.display = "none";
+                document.getElementById("logoutMenuItem").style.display = "none";
+            }
+
+            // Handler pentru logout
+            document.getElementById("logoutLink").addEventListener("click", (e) => {
+                e.preventDefault();
+                sessionStorage.removeItem("token");
+                window.location.href = "index.html";
+            });
+        });
+    </script>
 </body>
 </html>

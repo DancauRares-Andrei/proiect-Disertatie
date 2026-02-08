@@ -221,9 +221,10 @@ async function sendInstructions() {
     const statusEl = document.getElementById("status");
 
     const lines = textarea.value
-        .split("\n")
-        .map(l => l.trim())
-        .filter(l => l.length > 0);
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l.length > 0 && !l.startsWith("#"));
+
 
     if (lines.length === 0) {
         statusEl.textContent = "❌ Introdu cel puțin o instrucțiune.";

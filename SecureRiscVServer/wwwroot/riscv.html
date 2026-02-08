@@ -1,47 +1,203 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="utf-8" />
-    <title>RISC-V</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISC-V - Transmisie Securizată</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <nav>
+        <ul id="menuItems">
+            <li><a href="index.html">Acasă</a></li>
+            <li id="loginMenuItem" style="display: none;"><a href="login.html">Autentificare</a></li>
+            <li id="riscvMenuItem"><a href="riscv.html" class="active">RISC-V</a></li>
+            <li id="logoutMenuItem"><a href="#" id="logoutLink">Deconectare</a></li>
+        </ul>
+    </nav>
 
-    <h3>Send full RISC-V program</h3>
+    <div class="container">
+        <h1>Transmisie Instrucțiuni RISC-V</h1>
+        
+        <h3>Trimite program RISC-V complet</h3>
+        <p>Introduceți instrucțiunile RISC-V, câte una pe linie. Programul va fi trimis securizat către client.</p>
+        
+        <div class="form-group">
+            <label for="programSelect">Selectează un program predefinit:</label>
+            <select id="programSelect">
+                <option value="">-- Selectează un program --</option>
+                <option value="program_add_lw">Add & Load Word</option>
+                <option value="program_counter">Counter</option>
+                <option value="program_functie">Funcție</option>
+                <option value="program_mare">Program Mare</option>
+                <option value="program_paritate">Paritate</option>
+                <option value="program_procedura">Procedură</option>
+                <option value="program_sll_xor">SLL & XOR</option>
+                <option value="program_stocari_extrageri">Stocări & Extrageri</option>
+                <option value="program_suma">Sumă</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <textarea 
+                id="instr" 
+                rows="15" 
+                cols="50" 
+                placeholder="O instrucțiune pe linie. Exemplu:&#10;addi a0, zero, 5&#10;addi a1, zero, 10&#10;add a2, a0, a1"
+            ></textarea>
+        </div>
+        
+        <button id="sendBtn">
+            Trimite program
+        </button>
+        
+        <p id="status" class="status" style="display: none;"></p>
+    </div>
 
-    <textarea id="instr"
-              rows="10"
-              cols="50"
-              placeholder="O instructiune pe linie.
-Exemplu:
-addi a0, zero, 5"></textarea>
-
-    <br /><br />
-
-    <button id="sendBtn">
-        Send program
-    </button>
-
-    <p id="status" style="color: green"></p>
-
-    <script src="riscv.js"></script>
-
+    <script src="js/riscv.js"></script>
     <script>
-        // Echivalentul lui [Authorize]
+        // Dicționar cu programe predefinite
+        const programs = {
+            "program_add_lw": `# Program demonstrativ: ADD și LW
+addi a0, zero, 10
+addi a1, zero, 20
+add a2, a0, a1
+lw a3, 0(a2)`,
+            
+            "program_counter": `# Program: Counter simplu
+addi a0, zero, 0
+addi a1, zero, 1
+add a0, a0, a1
+add a0, a0, a1
+add a0, a0, a1`,
+            
+            "program_functie": `# Program: Funcție simplă
+addi sp, sp, -16
+sw ra, 12(sp)
+jal ra, functie
+lw ra, 12(sp)
+addi sp, sp, 16`,
+            
+            "program_mare": `# Program: Exemplu mai complex
+addi a0, zero, 5
+addi a1, zero, 10
+add a2, a0, a1
+sub a3, a2, a0
+and a4, a2, a3
+or a5, a4, a1
+xor a6, a5, a0
+sll a7, a6, 2
+srl t0, a7, 1
+beq a0, a1, label
+addi t1, zero, 1
+label:
+addi t2, zero, 2`,
+            
+            "program_paritate": `# Program: Verificare paritate
+addi a0, zero, 15
+andi a1, a0, 1
+beq a1, zero, par
+addi a2, zero, 1
+j end
+par:
+addi a2, zero, 0
+end:
+nop`,
+            
+            "program_procedura": `# Program: Procedură cu parametri
+addi a0, zero, 5
+addi a1, zero, 3
+jal ra, aduna
+j exit
+aduna:
+add a0, a0, a1
+jalr zero, ra, 0
+exit:
+nop`,
+            
+            "program_sll_xor": `# Program: Operații shift și XOR
+addi a0, zero, 8
+sll a1, a0, 2
+srl a2, a1, 1
+xor a3, a0, a1
+xor a4, a1, a2`,
+            
+            "program_stocari_extrageri": `# Program: Store și Load
+addi a0, zero, 100
+addi a1, zero, 0x1000
+sw a0, 0(a1)
+lw a2, 0(a1)
+addi a3, zero, 200
+sw a3, 4(a1)
+lw a4, 4(a1)`,
+            
+            "program_suma": `# Program: Sumă elemente
+addi a0, zero, 0
+addi a1, zero, 1
+addi a2, zero, 2
+addi a3, zero, 3
+add a4, a0, a1
+add a4, a4, a2
+add a4, a4, a3`
+        };
+
+        // Echivalentul lui [Authorize] - verificare autentificare
         document.addEventListener("DOMContentLoaded", () => {
             const token = sessionStorage.getItem("token");
-
+            
             if (!token) {
-                // nu e autentificat → redirect la login
-                window.location.href = "/login.html";
+                // Nu este autentificat → redirect la login
+                window.location.href = "login.html";
                 return;
             }
 
-            // optional: atașăm handlerul JS aici
-            document
-                .getElementById("sendBtn")
-                .addEventListener("click", sendInstructions);
+            // Actualizăm meniul pentru utilizator autentificat
+            document.getElementById("loginMenuItem").style.display = "none";
+            document.getElementById("riscvMenuItem").style.display = "block";
+            document.getElementById("logoutMenuItem").style.display = "block";
+
+            // Handler pentru logout
+            document.getElementById("logoutLink").addEventListener("click", (e) => {
+                e.preventDefault();
+                sessionStorage.removeItem("token");
+                window.location.href = "index.html";
+            });
+
+            // Handler pentru selectorul de programe
+            document.getElementById("programSelect").addEventListener("change", (e) => {
+                const programKey = e.target.value;
+                const textarea = document.getElementById("instr");
+                
+                if (programKey && programs[programKey]) {
+                    textarea.value = programs[programKey];
+                    
+                    // Animație subtilă pentru feedback vizual
+                    textarea.style.transition = "all 0.3s ease";
+                    textarea.style.borderColor = "var(--led-green)";
+                    textarea.style.boxShadow = "0 0 20px rgba(0, 255, 136, 0.3)";
+                    
+                    setTimeout(() => {
+                        textarea.style.borderColor = "";
+                        textarea.style.boxShadow = "";
+                    }, 1000);
+                } else if (programKey === "") {
+                    textarea.value = "";
+                }
+            });
+
+            // Atașăm handlerul pentru trimiterea instrucțiunilor
+            document.getElementById("sendBtn").addEventListener("click", () => {
+                if (typeof sendInstructions === "function") {
+                    sendInstructions();
+                } else {
+                    console.error("sendInstructions nu este definit");
+                    const statusEl = document.getElementById("status");
+                    statusEl.textContent = "Eroare: Funcția sendInstructions nu este disponibilă";
+                    statusEl.className = "status error";
+                    statusEl.style.display = "block";
+                }
+            });
         });
     </script>
-
 </body>
 </html>
