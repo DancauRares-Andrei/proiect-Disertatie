@@ -24,33 +24,14 @@ body {
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     line-height: 1.6;
     color: var(--text-light);
-    background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #1e2330 100%);
-    background-attachment: fixed;
+    background: var(--primary-dark);
     min-height: 100vh;
-    position: relative;
-}
-
-/* Efect de circuit board în fundal */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-        linear-gradient(90deg, rgba(78, 158, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(rgba(78, 158, 255, 0.03) 1px, transparent 1px);
-    background-size: 50px 50px;
-    pointer-events: none;
-    z-index: 0;
 }
 
 /* Meniu de navigare */
 nav {
-    background: linear-gradient(180deg, rgba(37, 43, 59, 0.95) 0%, rgba(26, 31, 46, 0.95) 100%);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 20px rgba(0, 255, 136, 0.1);
+    background: var(--secondary-dark);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     border-bottom: 2px solid var(--accent-blue);
     position: sticky;
     top: 0;
@@ -70,25 +51,6 @@ nav ul {
 
 nav li {
     margin: 0;
-    position: relative;
-}
-
-/* Efect de LED pe hover */
-nav li::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 2px;
-    background: var(--led-green);
-    transform: translateX(-50%);
-    transition: width 0.3s ease;
-    box-shadow: 0 0 10px var(--led-green);
-}
-
-nav li:hover::after {
-    width: 80%;
 }
 
 nav a {
@@ -105,7 +67,7 @@ nav a {
 }
 
 nav a:hover {
-    background: linear-gradient(180deg, rgba(46, 92, 138, 0.3) 0%, rgba(74, 158, 255, 0.2) 100%);
+    background: var(--accent-blue);
     color: var(--led-green);
 }
 
@@ -120,28 +82,11 @@ nav a.active {
     max-width: 1200px;
     margin: 2.5rem auto;
     padding: 2.5rem;
-    background: linear-gradient(135deg, rgba(37, 43, 59, 0.9) 0%, rgba(26, 31, 46, 0.85) 100%);
-    backdrop-filter: blur(15px);
-    border-radius: 12px;
-    box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(78, 158, 255, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background: var(--secondary-dark);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     border: 1px solid var(--border-color);
     position: relative;
-    z-index: 1;
-}
-
-/* Accent de lumină pe colț - efect PCB */
-.container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 100px;
-    height: 100px;
-    background: radial-gradient(circle at top right, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
-    pointer-events: none;
 }
 
 /* Titluri */
@@ -153,7 +98,6 @@ h1 {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 2px;
-    text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
 }
 
 h2 {
@@ -191,10 +135,8 @@ p {
     margin: 2rem auto;
     padding: 2.5rem;
     background: rgba(26, 31, 46, 0.6);
-    border-radius: 10px;
-    box-shadow: 
-        0 4px 20px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--border-color);
 }
 
@@ -234,14 +176,11 @@ p {
     outline: none;
     border-color: var(--accent-cyan);
     background: rgba(15, 20, 25, 0.95);
-    box-shadow: 
-        0 0 0 3px rgba(74, 158, 255, 0.1),
-        0 0 15px rgba(74, 158, 255, 0.2);
 }
 
 /* Butoane */
 button, .btn {
-    background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+    background: var(--accent-blue);
     color: var(--text-light);
     padding: 0.9rem 2.5rem;
     border: none;
@@ -252,11 +191,16 @@ button, .btn {
     letter-spacing: 1px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 
-        0 4px 15px rgba(74, 158, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    position: relative;
-    overflow: hidden;
+}
+
+button:hover, .btn:hover {
+    background: var(--accent-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(74, 158, 255, 0.3);
+}
+
+button:active, .btn:active {
+    transform: translateY(0);
 }
 
 /* Select dropdown */
@@ -283,9 +227,6 @@ select:focus {
     outline: none;
     border-color: var(--accent-cyan);
     background-color: rgba(15, 20, 25, 0.95);
-    box-shadow: 
-        0 0 0 3px rgba(74, 158, 255, 0.1),
-        0 0 15px rgba(74, 158, 255, 0.2);
 }
 
 select option {
@@ -296,37 +237,6 @@ select option {
 
 select:hover {
     border-color: var(--accent-cyan);
-}
-
-/* Efect de "pulse" pentru buton */
-button::before, .btn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-}
-
-button:hover::before, .btn:hover::before {
-    width: 300px;
-    height: 300px;
-}
-
-button:hover, .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 
-        0 6px 20px rgba(74, 158, 255, 0.4),
-        0 0 30px rgba(0, 255, 136, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-button:active, .btn:active {
-    transform: translateY(0);
 }
 
 /* Textarea pentru cod RISC-V */
@@ -353,20 +263,16 @@ textarea:focus {
     outline: none;
     border-color: var(--led-green);
     background: rgba(15, 20, 25, 0.95);
-    box-shadow: 
-        0 0 0 3px rgba(0, 255, 136, 0.1),
-        0 0 20px rgba(0, 255, 136, 0.2);
 }
 
 /* Mesaje de eroare */
 .error {
     color: var(--text-light);
-    background: linear-gradient(135deg, rgba(255, 71, 87, 0.2) 0%, rgba(255, 71, 87, 0.1) 100%);
+    background: rgba(255, 71, 87, 0.15);
     padding: 1rem;
     border-radius: 6px;
     margin-top: 1rem;
     border-left: 4px solid var(--error-red);
-    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.2);
     font-weight: 500;
 }
 
@@ -383,32 +289,14 @@ textarea:focus {
 
 .status.success {
     color: var(--text-light);
-    background: linear-gradient(135deg, rgba(0, 217, 163, 0.2) 0%, rgba(0, 255, 136, 0.1) 100%);
+    background: rgba(0, 217, 163, 0.15);
     border-left: 4px solid var(--success-green);
-    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
 }
 
 .status.error {
     color: var(--text-light);
-    background: linear-gradient(135deg, rgba(255, 71, 87, 0.2) 0%, rgba(255, 71, 87, 0.1) 100%);
+    background: rgba(255, 71, 87, 0.15);
     border-left: 4px solid var(--error-red);
-    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.2);
-}
-
-/* Efect de glow pentru LED-uri (doar decorativ) */
-@keyframes led-pulse {
-    0%, 100% {
-        opacity: 1;
-        text-shadow: 0 0 20px currentColor;
-    }
-    50% {
-        opacity: 0.8;
-        text-shadow: 0 0 30px currentColor;
-    }
-}
-
-h1 {
-    animation: led-pulse 3s ease-in-out infinite;
 }
 
 /* Responsive */
