@@ -48,7 +48,7 @@ namespace SecureRiscVServer.Components
 
             var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(30),
+                expires: DateTime.UtcNow.AddHours(6),
                 signingCredentials: creds
             );
 

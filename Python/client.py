@@ -3,6 +3,7 @@ from riscv import RISCVProcessor
 import requests
 import base64
 import time
+import threading
 
 SERVER = "http://localhost:5080"
 
@@ -18,6 +19,29 @@ class RSAClient:
     def encrypt_block(self, data: bytes):
         m = int.from_bytes(data, "big")
         return pow(m, self.e, self.n)
+
+class ProcessorRunner:
+    def __init__(self, processor):
+        self.processor = processor
+        self.exec_thread = None
+
+    def start_program(self, program):
+        self.stop_program()
+
+        self.processor.reset()
+        self.processor.load_program(program)
+
+        self.exec_thread = threading.Thread(
+            target=self.processor.run,
+            daemon=True
+        )
+        self.exec_thread.start()
+
+    def stop_program(self):
+        if self.exec_thread and self.exec_thread.is_alive():
+            self.processor.stop()
+            self.exec_thread.join(timeout=1)
+
 
 # ======================
 # Secure Client
@@ -55,6 +79,8 @@ class SecureClient:
         r.raise_for_status()
 
     def loop(self):
+        riscvProcessor = RISCVProcessor()
+        runner = ProcessorRunner(riscvProcessor)
         while True:
             r = requests.get(
                 f"{SERVER}/api/crypto/program",
@@ -71,20 +97,7 @@ class SecureClient:
 
             encrypted = base64.b64decode(r.text)
             plaintext = self.aes.decrypt(encrypted)
-            
-            riscvProcessor.reset()
-            riscvProcessor.load_program(plaintext)
-            riscvProcessor.run()
-            #print("=== RISC-V instructions ===")
-            #for i in range(0, len(plaintext), 4):
-            #    print(f"{plaintext[i]:02X}")
-            #    print(f"{plaintext[i+1]:02X}")
-            #    print(f"{plaintext[i+2]:02X}")
-            #    print(f"{plaintext[i+3]:02X}")
-                #word = int.from_bytes(plaintext[i:i+4], "little")
-                #print(f"0x{word:08X}")
-
-            #time.sleep(2)
+            runner.start_program(plaintext)
 
 
 # ======================

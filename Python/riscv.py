@@ -1,5 +1,5 @@
 import time
-
+import threading
 #Functie de extindere a unui numar la un numar specificat de biti
 def sign_extend(number, bits):
     mask = (1 << bits) - 1
@@ -21,6 +21,7 @@ def limit16bits(number):
 class RISCVProcessor:
     #Constructorul clasei, se initializeaza registrele si memoria RAM
     def __init__(self):
+        self.stop_event = threading.Event()
         self.reset()
 
     #Functia de reinitializare a registrelor si memoriei RAM
@@ -42,6 +43,7 @@ class RISCVProcessor:
         self.rs2 = 0
         self.rd = 0
         self.result = 0
+        self.stop_event.clear()
 
     def load_program(self,instructionBytes):
         self.memory=instructionBytes
@@ -273,9 +275,13 @@ class RISCVProcessor:
             self.Jump = False
         else:
             self.pc += 4 
+    def stop(self):
+        self.stop_event.set()
     #Functia de executare a programului din memoria ROM
     def run(self):
         while self.pc<len(self.memory):
+            if self.stop_event.is_set():
+                return
             self.execute()
             time.sleep(2)
         
