@@ -259,7 +259,7 @@ async function sendInstructions() {
 
     if (response.ok) {
         statusEl.textContent = `✅ Program trimis (${machine.length - 1} instrucțiuni).`;
-        textarea.value = "";
+        //textarea.value = "";
     } else {
         statusEl.textContent = "❌ Eroare server.";
     }

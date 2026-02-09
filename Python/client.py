@@ -1,10 +1,12 @@
 from myAES import AESClient
+from riscv import RISCVProcessor
 import requests
 import base64
 import time
 
 SERVER = "http://localhost:5080"
 
+riscvProcessor = RISCVProcessor()
 # ======================
 # RSA (manual)
 # ======================
@@ -69,13 +71,20 @@ class SecureClient:
 
             encrypted = base64.b64decode(r.text)
             plaintext = self.aes.decrypt(encrypted)
+            
+            riscvProcessor.reset()
+            riscvProcessor.load_program(plaintext)
+            riscvProcessor.run()
+            #print("=== RISC-V instructions ===")
+            #for i in range(0, len(plaintext), 4):
+            #    print(f"{plaintext[i]:02X}")
+            #    print(f"{plaintext[i+1]:02X}")
+            #    print(f"{plaintext[i+2]:02X}")
+            #    print(f"{plaintext[i+3]:02X}")
+                #word = int.from_bytes(plaintext[i:i+4], "little")
+                #print(f"0x{word:08X}")
 
-            print("=== RISC-V instructions ===")
-            for i in range(0, len(plaintext), 4):
-                word = int.from_bytes(plaintext[i:i+4], "little")
-                print(f"0x{word:08X}")
-
-            time.sleep(2)
+            #time.sleep(2)
 
 
 # ======================
