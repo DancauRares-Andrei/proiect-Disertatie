@@ -1,16 +1,17 @@
-from myAES import AESClient
-from riscv import RISCVProcessor
-import requests
-import base64
+import sys
 import time
 import threading
+import base64
+import requests
+
+from PyQt6.QtWidgets import QApplication
+
+from riscv import RISCVProcessor
+from interfataGrafica import LedPanel
+from myAES import AESClient
 
 SERVER = "http://localhost:5080"
 
-riscvProcessor = RISCVProcessor()
-# ======================
-# RSA (manual)
-# ======================
 class RSAClient:
     def __init__(self, e, n):
         self.e = int(e)
@@ -20,6 +21,9 @@ class RSAClient:
         m = int.from_bytes(data, "big")
         return pow(m, self.e, self.n)
 
+# ======================
+# Processor runner
+# ======================
 class ProcessorRunner:
     def __init__(self, processor):
         self.processor = processor
@@ -47,11 +51,13 @@ class ProcessorRunner:
 # Secure Client
 # ======================
 class SecureClient:
-    def __init__(self, email, password):
+    def __init__(self, email, password, processor, runner):
         self.email = email
         self.password = password
         self.jwt = None
         self.aes = AESClient()
+        self.processor = processor
+        self.runner = runner
 
     def login(self):
         r = requests.post(
@@ -67,6 +73,7 @@ class SecureClient:
         j = r.json()
         return RSAClient(j["e"], j["n"])
 
+    # -------- HANDSHAKE --------
     def handshake(self, rsa: RSAClient):
         payload = self.aes.key + self.aes.iv
         encrypted = rsa.encrypt_block(payload)
@@ -79,38 +86,65 @@ class SecureClient:
         r.raise_for_status()
 
     def loop(self):
-        riscvProcessor = RISCVProcessor()
-        runner = ProcessorRunner(riscvProcessor)
         while True:
             r = requests.get(
                 f"{SERVER}/api/crypto/program",
                 headers={"Authorization": f"Bearer {self.jwt}"}
             )
 
-            # 🔹 nimic de executat
             if r.status_code == 204:
                 time.sleep(2)
                 continue
+            #if r.status_code == 400:
+            #    time.sleep(2)
+            #    continue
 
-            # 🔹 orice altă eroare reală
             r.raise_for_status()
 
             encrypted = base64.b64decode(r.text)
             plaintext = self.aes.decrypt(encrypted)
-            runner.start_program(plaintext)
+
+            self.runner.start_program(plaintext)
 
 
 # ======================
-# MAIN
+# MAIN (client.py)
 # ======================
+app = QApplication(sys.argv)
+
+# UN SINGUR procesor
+processor = RISCVProcessor()
+runner = ProcessorRunner(processor)
+
+# UI
+window = LedPanel(processor)
+processor.signals.step_done.connect(
+    window.reg_table.update_registers
+)
+processor.signals.result_updated.connect(window.update_leds_from_result)
+processor.signals.print_text.connect(window.append_text)
+processor.signals.reset_text.connect(window.reset_text)
+window.show()
+
+# Client
 client = SecureClient(
     "admin",
-    "2F7NJdA85qw_BXV"
+    "2F7NJdA85qw_BXV",
+    processor,
+    runner
 )
 
 client.login()
 rsa = client.get_rsa()
 client.handshake(rsa)
 
-print("Handshake complet!")
-client.loop()
+window.textbox.setPlainText("Handshake complet!")
+
+# Thread polling server
+threading.Thread(
+    target=client.loop,
+    daemon=True
+).start()
+
+sys.exit(app.exec())
+
