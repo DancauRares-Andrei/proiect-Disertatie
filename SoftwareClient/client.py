@@ -128,7 +128,7 @@ window.show()
 
 # Client
 client = SecureClient(
-    "admin",
+    "software",
     "2F7NJdA85qw_BXV",
     processor,
     runner

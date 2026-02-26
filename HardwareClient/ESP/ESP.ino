@@ -1,5 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <SoftwareSerial.h>
+SoftwareSerial picoSerial(3, 2); 
 
 const char* ap_ssid = "ESP_SERVER";
 const char* ap_password = "12345678";
@@ -8,7 +10,7 @@ IPAddress laptopIP(192,168,4,2);
 const int port = 5080;
 
 const char* username = "admin";
-const char* password = "2F7NJdA85qw_BXV";
+const char* password = "R72Khgk4fvmI43W5dGYY0OEs4";
 
 String jwtToken = "";
 String rsa_e = "";
@@ -71,6 +73,14 @@ bool login() {
   return true;
 }
 
+void sendPublicKeyToPico() {
+  Serial2.print("PUBKEY:");
+  Serial2.print(rsa_e);
+  Serial2.print(":");
+  Serial2.print(rsa_n);
+  Serial2.print("\n");
+}
+
 bool getPublicKey() {
   WiFiClient client;
   HTTPClient http;
@@ -97,6 +107,9 @@ bool getPublicKey() {
   rsa_n = response.substring(n_start, n_end);
 
   Serial.println("Public key OK");
+
+  sendPublicKeyToPico();   // ← AICI trimite către Pico
+
   return true;
 }
 
