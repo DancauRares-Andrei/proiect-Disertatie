@@ -1,35 +1,45 @@
 #include <ESP8266WiFi.h>
+#include <SoftwareSerial.h>
 #include <ESP8266HTTPClient.h>
 
 const char *ap_ssid     = "ESP_SERVER";
 const char *ap_password = "12345678";
-
-IPAddress laptopIP(192, 168, 4, 2);
-const int  port = 5080;
+IPAddress   laptopIP(192, 168, 4, 2);
+const int   serverPort  = 5080;
 
 const char *username = "hardware";
 const char *password = "R72Khgk4fvmI43W5dGYY0OEs4";
 
-String jwtToken = "";
+String     jwtToken = "";
 WiFiClient wifiClient;
+
+#define PICO_RX 13
+#define PICO_TX 15
+
+SoftwareSerial picoSerial(PICO_RX, PICO_TX);
+
+#define PICO_UART picoSerial
+#define PICO_BAUD 57600
+
+#define PICO_ACK_TIMEOUT_MS 15000
 
 #define BIG_LIMBS 64
 
 struct BigInt {
   uint32_t d[BIG_LIMBS];
   int      len;
-
   BigInt() : len(1) { memset(d, 0, sizeof(d)); }
 };
 
-void bi_zero(BigInt &a) {
-  memset(a.d, 0, sizeof(a.d));
-  a.len = 1;
+void bi_zero(BigInt &a) { memset(a.d, 0, sizeof(a.d)); a.len = 1; }
+
+void bi_copy(BigInt &dst, const BigInt &src) {
+  memcpy(dst.d, src.d, sizeof(src.d)); dst.len = src.len;
 }
 
 void bi_normalize(BigInt &a) {
   a.len = BIG_LIMBS;
-  while (a.len > 1 && a.d[a.len - 1] == 0) a.len--;
+  while (a.len > 1 && a.d[a.len-1] == 0) a.len--;
 }
 
 bool bi_is_zero(const BigInt &a) {
@@ -37,19 +47,12 @@ bool bi_is_zero(const BigInt &a) {
   return true;
 }
 
-void bi_copy(BigInt &dst, const BigInt &src) {
-  memcpy(dst.d, src.d, sizeof(src.d));
-  dst.len = src.len;
-}
-
-// Compară: -1 a<b, 0 egal, +1 a>b
 int bi_cmp(const BigInt &a, const BigInt &b) {
   int top = (a.len > b.len) ? a.len : b.len;
-  for (int i = top - 1; i >= 0; i--) {
+  for (int i = top-1; i >= 0; i--) {
     uint32_t ai = (i < a.len) ? a.d[i] : 0;
     uint32_t bi = (i < b.len) ? b.d[i] : 0;
-    if (ai < bi) return -1;
-    if (ai > bi) return  1;
+    if (ai < bi) return -1; if (ai > bi) return 1;
   }
   return 0;
 }
@@ -60,8 +63,7 @@ void bi_from_dec(BigInt &r, const char *s) {
     uint64_t carry = (uint8_t)(*s++ - '0');
     for (int i = 0; i < BIG_LIMBS; i++) {
       uint64_t cur = (uint64_t)r.d[i] * 10 + carry;
-      r.d[i] = (uint32_t)(cur & 0xFFFFFFFFULL);
-      carry   = cur >> 32;
+      r.d[i] = (uint32_t)(cur & 0xFFFFFFFFULL); carry = cur >> 32;
     }
   }
   bi_normalize(r);
@@ -73,8 +75,7 @@ void bi_from_bytes_be(BigInt &r, const uint8_t *buf, int len) {
     uint64_t carry = buf[i];
     for (int j = 0; j < BIG_LIMBS; j++) {
       uint64_t cur = (uint64_t)r.d[j] * 256 + carry;
-      r.d[j] = (uint32_t)(cur & 0xFFFFFFFFULL);
-      carry   = cur >> 32;
+      r.d[j] = (uint32_t)(cur & 0xFFFFFFFFULL); carry = cur >> 32;
     }
   }
   bi_normalize(r);
@@ -83,52 +84,29 @@ void bi_from_bytes_be(BigInt &r, const uint8_t *buf, int len) {
 String bi_to_dec(const BigInt &a) {
   if (bi_is_zero(a)) return "0";
   BigInt tmp; bi_copy(tmp, a);
-  char buf[700];
-  int pos = sizeof(buf) - 1;
-  buf[pos] = '\0';
+  char buf[700]; int pos = sizeof(buf)-1; buf[pos] = '\0';
   while (!bi_is_zero(tmp)) {
     uint64_t rem = 0;
-    for (int i = tmp.len - 1; i >= 0; i--) {
+    for (int i = tmp.len-1; i >= 0; i--) {
       uint64_t cur = (rem << 32) | tmp.d[i];
-      tmp.d[i] = (uint32_t)(cur / 10);
-      rem = cur % 10;
+      tmp.d[i] = (uint32_t)(cur / 10); rem = cur % 10;
     }
     bi_normalize(tmp);
     buf[--pos] = '0' + (char)rem;
+    ESP.wdtFeed();
   }
   return String(buf + pos);
-}
-
-void bi_add(BigInt &r, const BigInt &a, const BigInt &b) {
-  int top = ((a.len > b.len) ? a.len : b.len) + 1;
-  if (top > BIG_LIMBS) top = BIG_LIMBS;
-  uint64_t carry = 0;
-  for (int i = 0; i < top; i++) {
-    uint64_t s = carry
-      + ((i < a.len) ? (uint64_t)a.d[i] : 0)
-      + ((i < b.len) ? (uint64_t)b.d[i] : 0);
-    r.d[i] = (uint32_t)(s & 0xFFFFFFFFULL);
-    carry   = s >> 32;
-  }
-  r.len = top;
-  bi_normalize(r);
 }
 
 void bi_sub(BigInt &r, const BigInt &a, const BigInt &b) {
   uint64_t borrow = 0;
   for (int i = 0; i < a.len; i++) {
-    uint64_t ai = a.d[i];
-    uint64_t bi = (i < b.len) ? (uint64_t)b.d[i] : 0;
-    uint64_t s;
-    if (ai >= bi + borrow) {
-      s = ai - bi - borrow; borrow = 0;
-    } else {
-      s = ai + (1ULL << 32) - bi - borrow; borrow = 1;
-    }
+    uint64_t ai = a.d[i], bi2 = (i < b.len) ? (uint64_t)b.d[i] : 0, s;
+    if (ai >= bi2 + borrow) { s = ai - bi2 - borrow; borrow = 0; }
+    else { s = ai + (1ULL<<32) - bi2 - borrow; borrow = 1; }
     r.d[i] = (uint32_t)s;
   }
-  r.len = a.len;
-  bi_normalize(r);
+  r.len = a.len; bi_normalize(r);
 }
 
 void bi_mul(BigInt &r, const BigInt &a, const BigInt &b) {
@@ -136,59 +114,46 @@ void bi_mul(BigInt &r, const BigInt &a, const BigInt &b) {
   for (int i = 0; i < a.len; i++) {
     uint64_t carry = 0;
     for (int j = 0; j < b.len; j++) {
-      if (i + j >= BIG_LIMBS) break;
-      uint64_t cur = (uint64_t)a.d[i] * b.d[j] + r.d[i+j] + carry;
-      r.d[i+j] = (uint32_t)(cur & 0xFFFFFFFFULL);
-      carry = cur >> 32;
+      if (i+j >= BIG_LIMBS) break;
+      uint64_t cur = (uint64_t)a.d[i]*b.d[j] + r.d[i+j] + carry;
+      r.d[i+j] = (uint32_t)(cur & 0xFFFFFFFFULL); carry = cur >> 32;
     }
-    int nxt = i + b.len;
+    int nxt = i+b.len;
     if (nxt < BIG_LIMBS) r.d[nxt] += (uint32_t)carry;
   }
-  r.len = a.len + b.len;
-  if (r.len > BIG_LIMBS) r.len = BIG_LIMBS;
+  r.len = a.len+b.len; if (r.len > BIG_LIMBS) r.len = BIG_LIMBS;
   bi_normalize(r);
 }
 
 void bi_mod(BigInt &r, const BigInt &a, const BigInt &m) {
   bi_copy(r, a);
-
   int mBit = 0;
-  for (int i = m.len * 32 - 1; i >= 0; i--) {
-    if (m.d[i/32] & (1u << (i%32))) { mBit = i; break; }
-  }
-
+  for (int i = m.len*32-1; i >= 0; i--)
+    if (m.d[i/32] & (1u<<(i%32))) { mBit = i; break; }
   int rBit = 0;
-  for (int i = BIG_LIMBS * 32 - 1; i >= 0; i--) {
-    if (r.d[i/32] & (1u << (i%32))) { rBit = i; break; }
-  }
-
-  for (int s = rBit - mBit; s >= 0; s--) {
-
+  for (int i = BIG_LIMBS*32-1; i >= 0; i--)
+    if (r.d[i/32] & (1u<<(i%32))) { rBit = i; break; }
+  for (int s = rBit-mBit; s >= 0; s--) {
+    ESP.wdtFeed();
     BigInt ms; bi_zero(ms);
-    int ws = s / 32, bs = s % 32;
-    for (int i = 0; i < m.len && i + ws < BIG_LIMBS; i++) {
-      ms.d[i + ws] |= m.d[i] << bs;
-      if (bs && i + ws + 1 < BIG_LIMBS)
-        ms.d[i + ws + 1] |= m.d[i] >> (32 - bs);
+    int ws = s/32, bs = s%32;
+    for (int i = 0; i < m.len && i+ws < BIG_LIMBS; i++) {
+      ms.d[i+ws] |= m.d[i] << bs;
+      if (bs && i+ws+1 < BIG_LIMBS) ms.d[i+ws+1] |= m.d[i] >> (32-bs);
     }
-    ms.len = m.len + ws + 1;
-    if (ms.len > BIG_LIMBS) ms.len = BIG_LIMBS;
+    ms.len = m.len+ws+1; if (ms.len > BIG_LIMBS) ms.len = BIG_LIMBS;
     bi_normalize(ms);
-
-    if (bi_cmp(r, ms) >= 0) {
-      BigInt tmp; bi_sub(tmp, r, ms); bi_copy(r, tmp);
-    }
+    if (bi_cmp(r, ms) >= 0) { BigInt tmp; bi_sub(tmp, r, ms); bi_copy(r, tmp); }
   }
   bi_normalize(r);
 }
 
 void bi_modexp(BigInt &r, const BigInt &base, const BigInt &exp, const BigInt &mod) {
-  bi_zero(r); r.d[0] = 1; r.len = 1;   // r = 1
+  bi_zero(r); r.d[0] = 1; r.len = 1;
   BigInt b; bi_mod(b, base, mod);
-
-  int expBits = exp.len * 32;
-  for (int i = 0; i < expBits; i++) {
-    if (exp.d[i/32] & (1u << (i%32))) {
+  for (int i = 0; i < exp.len*32; i++) {
+    yield();
+    if (exp.d[i/32] & (1u<<(i%32))) {
       BigInt tmp; bi_mul(tmp, r, b); bi_mod(r, tmp, mod);
     }
     BigInt b2; bi_mul(b2, b, b); bi_mod(b, b2, mod);
@@ -214,7 +179,6 @@ const uint8_t SBOX[256] PROGMEM = {
   0xE1,0xF8,0x98,0x11,0x69,0xD9,0x8E,0x94,0x9B,0x1E,0x87,0xE9,0xCE,0x55,0x28,0xDF,
   0x8C,0xA1,0x89,0x0D,0xBF,0xE6,0x42,0x68,0x41,0x99,0x2D,0x0F,0xB0,0x54,0xBB,0x16
 };
-
 const uint8_t INV_SBOX[256] PROGMEM = {
   0x52,0x09,0x6A,0xD5,0x30,0x36,0xA5,0x38,0xBF,0x40,0xA3,0x9E,0x81,0xF3,0xD7,0xFB,
   0x7C,0xE3,0x39,0x82,0x9B,0x2F,0xFF,0x87,0x34,0x8E,0x43,0x44,0xC4,0xDE,0xE9,0xCB,
@@ -233,72 +197,38 @@ const uint8_t INV_SBOX[256] PROGMEM = {
   0xA0,0xE0,0x3B,0x4D,0xAE,0x2A,0xF5,0xB0,0xC8,0xEB,0xBB,0x3C,0x83,0x53,0x99,0x61,
   0x17,0x2B,0x04,0x7E,0xBA,0x77,0xD6,0x26,0xE1,0x69,0x14,0x63,0x55,0x21,0x0C,0x7D
 };
-
 const uint8_t Rcon[10] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1B,0x36};
 
-uint8_t aes_key[16];
-uint8_t aes_iv[16];
-uint8_t roundKey[176];
+uint8_t aes_key[16], aes_iv[16], roundKey[176];
 
-uint8_t xtime_f(uint8_t a) {
-  return (a & 0x80) ? ((a << 1) ^ 0x1B) : (a << 1);
-}
+uint8_t xtime_f(uint8_t a) { return (a&0x80)?((a<<1)^0x1B):(a<<1); }
 uint8_t gf_mul(uint8_t a, uint8_t b) {
-  uint8_t r = 0;
-  for (int i = 0; i < 8; i++) {
-    if (b & 1) r ^= a;
-    a = xtime_f(a); b >>= 1;
-  }
+  uint8_t r=0;
+  for(int i=0;i<8;i++){if(b&1)r^=a; a=xtime_f(a); b>>=1;}
   return r;
 }
-
 void KeyExpansion() {
   memcpy(roundKey, aes_key, 16);
-  int bytesGenerated = 16;
-  int rconIdx = 0;
-  uint8_t temp[4];
-
-  while (bytesGenerated < 176) {
-    for (int i = 0; i < 4; i++)
-      temp[i] = roundKey[bytesGenerated - 4 + i];
-
-    if (bytesGenerated % 16 == 0) {
-      // RotWord
-      uint8_t k = temp[0];
-      temp[0]=temp[1]; temp[1]=temp[2]; temp[2]=temp[3]; temp[3]=k;
-      // SubWord
-      for (int i = 0; i < 4; i++) temp[i] = pgm_read_byte(&SBOX[temp[i]]);
-      // Rcon
-      temp[0] ^= Rcon[rconIdx++];
+  int bg=16, ri=0; uint8_t temp[4];
+  while(bg<176){
+    for(int i=0;i<4;i++) temp[i]=roundKey[bg-4+i];
+    if(bg%16==0){
+      uint8_t k=temp[0]; temp[0]=temp[1]; temp[1]=temp[2]; temp[2]=temp[3]; temp[3]=k;
+      for(int i=0;i<4;i++) temp[i]=pgm_read_byte(&SBOX[temp[i]]);
+      temp[0]^=Rcon[ri++];
     }
-
-    for (int a = 0; a < 4; a++) {
-      roundKey[bytesGenerated] = roundKey[bytesGenerated-16] ^ temp[a];
-      bytesGenerated++;
-    }
+    for(int a=0;a<4;a++){roundKey[bg]=roundKey[bg-16]^temp[a]; bg++;}
   }
 }
-
-void AddRoundKey(uint8_t *state, int round) {
-  for (int i = 0; i < 16; i++) state[i] ^= roundKey[round*16+i];
+void AddRoundKey(uint8_t *s, int r){for(int i=0;i<16;i++) s[i]^=roundKey[r*16+i];}
+void inv_sub_bytes(uint8_t *s){for(int i=0;i<16;i++) s[i]=pgm_read_byte(&INV_SBOX[s[i]]);}
+void inv_shift_rows(uint8_t *s){
+  uint8_t t[16]={s[0],s[13],s[10],s[7],s[4],s[1],s[14],s[11],
+                 s[8],s[5],s[2],s[15],s[12],s[9],s[6],s[3]};
+  memcpy(s,t,16);
 }
-
-void inv_sub_bytes(uint8_t *s) {
-  for (int i = 0; i < 16; i++) s[i] = pgm_read_byte(&INV_SBOX[s[i]]);
-}
-
-void inv_shift_rows(uint8_t *s) {
-  uint8_t t[16] = {
-    s[0],s[13],s[10],s[7],
-    s[4],s[1], s[14],s[11],
-    s[8],s[5], s[2], s[15],
-    s[12],s[9],s[6], s[3]
-  };
-  memcpy(s, t, 16);
-}
-
-void inv_mix_columns(uint8_t *s) {
-  for (int i = 0; i < 16; i += 4) {
+void inv_mix_columns(uint8_t *s){
+  for(int i=0;i<16;i+=4){
     uint8_t a0=s[i],a1=s[i+1],a2=s[i+2],a3=s[i+3];
     s[i]  =gf_mul(a0,14)^gf_mul(a1,11)^gf_mul(a2,13)^gf_mul(a3,9);
     s[i+1]=gf_mul(a0,9) ^gf_mul(a1,14)^gf_mul(a2,11)^gf_mul(a3,13);
@@ -306,220 +236,185 @@ void inv_mix_columns(uint8_t *s) {
     s[i+3]=gf_mul(a0,11)^gf_mul(a1,13)^gf_mul(a2,9) ^gf_mul(a3,14);
   }
 }
-
-void AES_decrypt_block(uint8_t *block) {
-  uint8_t state[16]; memcpy(state, block, 16);
-  AddRoundKey(state, 10);
-  for (int r = 9; r >= 1; r--) {
-    inv_shift_rows(state); inv_sub_bytes(state);
-    AddRoundKey(state, r); inv_mix_columns(state);
-  }
-  inv_shift_rows(state); inv_sub_bytes(state); AddRoundKey(state, 0);
-  memcpy(block, state, 16);
+void AES_decrypt_block(uint8_t *block){
+  uint8_t state[16]; memcpy(state,block,16);
+  AddRoundKey(state,10);
+  for(int r=9;r>=1;r--){inv_shift_rows(state);inv_sub_bytes(state);AddRoundKey(state,r);inv_mix_columns(state);}
+  inv_shift_rows(state); inv_sub_bytes(state); AddRoundKey(state,0);
+  memcpy(block,state,16);
 }
 
 static const char b64ch[] =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-int b64_decode(const String &in, uint8_t *out) {
-  int outLen = 0; uint32_t buf = 0; int bits = 0;
-  for (int i = 0; i < (int)in.length(); i++) {
-    char c = in.charAt(i);
-    if (c == '=') break;
-    const char *p = strchr(b64ch, c);
-    if (!p) continue;
-    buf = (buf << 6) | (int)(p - b64ch);
-    bits += 6;
-    if (bits >= 8) { bits -= 8; out[outLen++] = (buf >> bits) & 0xFF; }
+int b64_decode(const String &in, uint8_t *out){
+  int outLen=0; uint32_t buf=0; int bits=0;
+  for(int i=0;i<(int)in.length();i++){
+    char c=in.charAt(i); if(c=='=') break;
+    const char *p=strchr(b64ch,c); if(!p) continue;
+    buf=(buf<<6)|(int)(p-b64ch); bits+=6;
+    if(bits>=8){bits-=8; out[outLen++]=(buf>>bits)&0xFF;}
   }
   return outLen;
 }
 
-int pkcs7_unpad(uint8_t *data, int len) {
-  if (len == 0) return 0;
-  uint8_t pad = data[len-1];
-  if (pad == 0 || pad > 16) return len;
-  for (int i = len-pad; i < len; i++) if (data[i] != pad) return len;
-  return len - pad;
+int pkcs7_unpad(uint8_t *data, int len){
+  if(len==0) return 0;
+  uint8_t pad=data[len-1];
+  if(pad==0||pad>16) return len;
+  for(int i=len-pad;i<len;i++) if(data[i]!=pad) return len;
+  return len-pad;
 }
 
-bool login() {
+static String jsonExtractNum(const String &json, const char *key){
+  int pos=json.indexOf(key); if(pos<0) return "";
+  pos+=strlen(key);
+  while(pos<(int)json.length()&&(json.charAt(pos)==' '||json.charAt(pos)==':'||json.charAt(pos)=='"')) pos++;
+  int end=pos;
+  while(end<(int)json.length()&&isDigit(json.charAt(end))) end++;
+  return json.substring(pos,end);
+}
+
+bool do_login(){
   HTTPClient http;
-  http.begin(wifiClient,
-    "http://" + laptopIP.toString() + ":" + port + "/api/auth/login");
+  http.begin(wifiClient,"http://"+laptopIP.toString()+":"+serverPort+"/api/auth/login");
   http.addHeader("Content-Type","application/json");
-
-  String body = "{\"username\":\"" + String(username) +
-                "\",\"password\":\"" + String(password) + "\"}";
-  int code = http.POST(body);
-  if (code != 200) {
-    Serial.printf("[LOGIN] HTTP %d\n", code); http.end(); return false;
-  }
-
-  String resp = http.getString(); http.end();
-  int s = resp.indexOf("\"token\":\"");
-  if (s < 0) return false;
-  s += 9;
-  jwtToken = resp.substring(s, resp.indexOf("\"", s));
-  Serial.println("[LOGIN] OK");
-  return true;
+  String body="{\"username\":\""+String(username)+"\",\"password\":\""+String(password)+"\"}";
+  int code=http.POST(body);
+  if(code!=200){Serial.printf("[LOGIN] HTTP %d\n",code);http.end();return false;}
+  String resp=http.getString(); http.end();
+  int s=resp.indexOf("\"token\":\""); if(s<0) return false; s+=9;
+  jwtToken=resp.substring(s,resp.indexOf("\"",s));
+  Serial.println("[LOGIN] OK"); return true;
 }
 
-static String jsonExtractNum(const String &json, const char *key) {
-  int pos = json.indexOf(key);
-  if (pos < 0) return "";
-  pos += strlen(key);
-  while (pos < (int)json.length() &&
-         (json.charAt(pos) == ' ' || json.charAt(pos) == ':' ||
-          json.charAt(pos) == '"')) pos++;
-  int end = pos;
-  while (end < (int)json.length() && isDigit(json.charAt(end))) end++;
-  return json.substring(pos, end);
-}
-
-bool getPublicKey(BigInt &e_out, BigInt &n_out) {
+bool do_getPublicKey(BigInt &e_out, BigInt &n_out){
   HTTPClient http;
-  http.begin(wifiClient,
-    "http://" + laptopIP.toString() + ":" + port + "/api/crypto/publickey");
-  int code = http.GET();
-  if (code != 200) {
-    Serial.printf("[PUBKEY] HTTP %d\n", code); http.end(); return false;
-  }
-  String resp = http.getString(); http.end();
-
-  String e_str = jsonExtractNum(resp, "\"e\"");
-  String n_str = jsonExtractNum(resp, "\"n\"");
-  if (e_str.length() == 0 || n_str.length() == 0) {
-    Serial.println("[PUBKEY] Parsare JSON esuata"); return false;
-  }
-
-  bi_from_dec(e_out, e_str.c_str());
-  bi_from_dec(n_out, n_str.c_str());
-  Serial.printf("[PUBKEY] e=%s... (%d cifre), n (%d cifre)\n",
-    e_str.substring(0,8).c_str(), e_str.length(), n_str.length());
+  http.begin(wifiClient,"http://"+laptopIP.toString()+":"+serverPort+"/api/crypto/publickey");
+  int code=http.GET();
+  if(code!=200){Serial.printf("[PUBKEY] HTTP %d\n",code);http.end();return false;}
+  String resp=http.getString(); http.end();
+  String e_str=jsonExtractNum(resp,"\"e\""), n_str=jsonExtractNum(resp,"\"n\"");
+  if(!e_str.length()||!n_str.length()) return false;
+  bi_from_dec(e_out,e_str.c_str()); bi_from_dec(n_out,n_str.c_str());
+  Serial.printf("[PUBKEY] e(%d cifre) n(%d cifre)\n",e_str.length(),n_str.length());
   return true;
 }
 
-void generateAES() {
-  randomSeed(analogRead(A0) ^ micros());
-  for (int i = 0; i < 16; i++) {
-    aes_key[i] = random(0, 256);
-    aes_iv[i]  = random(0, 256);
-  }
+void generateAES(){
+  randomSeed(analogRead(A0)^micros());
+  for(int i=0;i<16;i++){aes_key[i]=random(0,256); aes_iv[i]=random(0,256);}
   KeyExpansion();
 }
 
-bool sendHandshake(const BigInt &rsa_e, const BigInt &rsa_n) {
-  Serial.println("[HANDSHAKE] Calculez RSA (poate dura cateva secunde)...");
-
-  uint8_t payload[32];
-  memcpy(payload,      aes_key, 16);
-  memcpy(payload + 16, aes_iv,  16);
-
-  BigInt m, c;
-  bi_from_bytes_be(m, payload, 32);
-  bi_modexp(c, m, rsa_e, rsa_n);
-
-  String cStr = bi_to_dec(c);
-  Serial.printf("[HANDSHAKE] c (%d cifre)\n", cStr.length());
-
+bool do_sendHandshake(const BigInt &rsa_e, const BigInt &rsa_n){
+  Serial.println("[HANDSHAKE] Calculez RSA...");
+  uint8_t payload[32]; memcpy(payload,aes_key,16); memcpy(payload+16,aes_iv,16);
+  BigInt m,c; bi_from_bytes_be(m,payload,32); bi_modexp(c,m,rsa_e,rsa_n);
+  String cStr=bi_to_dec(c);
   HTTPClient http;
-  http.begin(wifiClient,
-    "http://" + laptopIP.toString() + ":" + port + "/api/crypto/handshake");
+  http.begin(wifiClient,"http://"+laptopIP.toString()+":"+serverPort+"/api/crypto/handshake");
   http.addHeader("Content-Type","application/json");
-  http.addHeader("Authorization","Bearer " + jwtToken);
-
-  String body = "{\"encryptedKey\":[\"" + cStr + "\"]}";
-  int code = http.POST(body);
+  http.addHeader("Authorization","Bearer "+jwtToken);
+  int code=http.POST("{\"encryptedKey\":[\""+cStr+"\"]}");
   http.end();
+  if(code==200){Serial.println("[HANDSHAKE] OK"); return true;}
+  Serial.printf("[HANDSHAKE] HTTP %d\n",code); return false;
+}
 
-  if (code == 200) { Serial.println("[HANDSHAKE] OK"); return true; }
-  Serial.printf("[HANDSHAKE] HTTP %d\n", code);
+bool send_to_pico(const uint8_t *prog, int len){
+  Serial.printf("[UART] Trimit %d bytes catre Pico...\n", len);
+
+  uint8_t header[4] = {
+    (uint8_t)(len >> 24),
+    (uint8_t)(len >> 16),
+    (uint8_t)(len >>  8),
+    (uint8_t)(len      )
+  };
+  PICO_UART.write(header, 4);
+
+  PICO_UART.write(prog, len);
+  PICO_UART.flush();
+
+  String ack = "";
+  unsigned long t0 = millis();
+  while(millis() - t0 < PICO_ACK_TIMEOUT_MS){
+    while(PICO_UART.available()){
+      char c = PICO_UART.read();
+      if(c == '\n') goto done;
+      ack += c;
+    }
+    yield();
+  }
+  done:
+  ack.trim();
+  if(ack == "OK"){
+    Serial.println("[UART] Pico a confirmat recepția.");
+    return true;
+  }
+  Serial.printf("[UART] Răspuns Pico: '%s' (așteptat OK)\n", ack.c_str());
   return false;
 }
 
-bool getProgram() {
+void fetchAndSend(){
   HTTPClient http;
-  http.begin(wifiClient,
-    "http://" + laptopIP.toString() + ":" + port + "/api/crypto/program");
-  http.addHeader("Authorization","Bearer " + jwtToken);
+  http.begin(wifiClient,"http://"+laptopIP.toString()+":"+serverPort+"/api/crypto/program");
+  http.addHeader("Authorization","Bearer "+jwtToken);
 
-  int code = http.GET();
-  if (code == 204) {
-    Serial.println("[PROGRAM] Nimic disponibil."); http.end(); return false;
-  }
-  if (code != 200) {
-    Serial.printf("[PROGRAM] HTTP %d\n", code); http.end(); return false;
-  }
+  int code=http.GET();
+  if(code==204){Serial.println("[PROGRAM] Nimic disponibil."); http.end(); return;}
+  if(code!=200){Serial.printf("[PROGRAM] HTTP %d\n",code); http.end(); return;}
 
-  String b64 = http.getString(); http.end();
-  b64.trim();
+  String b64=http.getString(); http.end(); b64.trim();
 
-  int maxLen = (b64.length() * 3) / 4 + 4;
-  uint8_t *enc   = (uint8_t *)malloc(maxLen);
-  uint8_t *plain = (uint8_t *)malloc(maxLen);
-  if (!enc || !plain) {
+  int maxLen=(b64.length()*3)/4+4;
+  uint8_t *enc  =(uint8_t*)malloc(maxLen);
+  uint8_t *plain=(uint8_t*)malloc(maxLen);
+  if(!enc||!plain){
     Serial.println("[PROGRAM] Memorie insuficienta!");
-    free(enc); free(plain); return false;
+    free(enc); free(plain); return;
   }
 
-  int encLen = b64_decode(b64, enc);
-  Serial.printf("[PROGRAM] %d bytes cifrati.\n", encLen);
-
-  uint8_t prev[16]; memcpy(prev, aes_iv, 16);
-  for (int i = 0; i < encLen; i += 16) {
-    uint8_t block[16]; memcpy(block, enc + i, 16);
+  int encLen=b64_decode(b64,enc);
+  uint8_t prev[16]; memcpy(prev,aes_iv,16);
+  for(int i=0;i<encLen;i+=16){
+    uint8_t block[16]; memcpy(block,enc+i,16);
     AES_decrypt_block(block);
-    for (int j = 0; j < 16; j++) plain[i+j] = block[j] ^ prev[j];
-    memcpy(prev, enc + i, 16);  // prev = ciphertext original (CBC corect)
+    for(int j=0;j<16;j++) plain[i+j]=block[j]^prev[j];
+    memcpy(prev,enc+i,16);
   }
   free(enc);
 
-  int plainLen = pkcs7_unpad(plain, encLen);
-  Serial.printf("[PROGRAM] Plaintext: %d bytes.\n", plainLen);
+  int plainLen=pkcs7_unpad(plain,encLen);
+  Serial.printf("[PROGRAM] Decriptat: %d bytes. Trimit pe UART...\n", plainLen);
 
-  Serial.println("[PROGRAM] --- BEGIN ---");
-  for (int i = 0; i < plainLen; i++) {
-    Serial.printf("%02X", plain[i]);
-    Serial.print((i % 4 == 3) ? " " : "");
-    if (i % 16 == 15) Serial.println();
-  }
-  Serial.println("\n[PROGRAM] --- END ---");
-
+  send_to_pico(plain, plainLen);
   free(plain);
-  return true;
 }
 
-void setup() {
+void setup(){
   Serial.begin(115200);
+  PICO_UART.begin(PICO_BAUD);
   delay(500);
-  Serial.println("\n[BOOT] ESP8266 Hardware Client");
+  Serial.println("\n[BOOT] ESP8266 + Pico RISC-V Client");
 
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid, ap_password);
-  Serial.print("[WIFI] AP pornit. IP ESP: ");
-  Serial.println(WiFi.softAPIP());   // 192.168.4.1
-
-  Serial.println("[WIFI] Asteapta conexiunea laptopului (5s)...");
+  Serial.print("[WIFI] AP: "); Serial.println(WiFi.softAPIP());
   delay(5000);
 
-  while (!login())       { Serial.println("[LOGIN] Reincerc..."); delay(3000); }
+  while(!do_login())      { Serial.println("[LOGIN] Reincerc..."); delay(3000); }
 
   BigInt rsa_e, rsa_n;
-  while (!getPublicKey(rsa_e, rsa_n)) {
-    Serial.println("[PUBKEY] Reincerc..."); delay(3000);
-  }
+  while(!do_getPublicKey(rsa_e,rsa_n)){ Serial.println("[PUBKEY] Reincerc..."); delay(3000); }
 
   generateAES();
-
-  while (!sendHandshake(rsa_e, rsa_n)) {
-    Serial.println("[HANDSHAKE] Reincerc..."); delay(3000);
-  }
+  while(!do_sendHandshake(rsa_e,rsa_n)){ Serial.println("[HANDSHAKE] Reincerc..."); delay(3000); }
 
   Serial.println("[SETUP] Gata. Pornesc polling...");
 }
 
-void loop() {
-  getProgram();
+void loop(){
+  fetchAndSend();
   delay(2000);
 }
