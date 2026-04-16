@@ -1,5 +1,6 @@
 import time
 import machine
+import _thread
 
 uart = machine.UART(0, baudrate=57600, tx=machine.Pin(0), rx=machine.Pin(1))
 
@@ -9,7 +10,12 @@ def set_pins_from_result(result):
     for i in range(16):
         LED_PINS[i].value(1 if (result & (1 << i)) else 0)
 
-STEP_DELAY_MS = 500
+STEP_DELAY_MS = 2000
+
+# Lock-uri și variabile partajate
+program_lock = _thread.allocate_lock()
+new_program = None
+stop_execution = False
 
 def sign_extend(number, bits):
     mask = (1 << bits) - 1
@@ -104,50 +110,49 @@ class RISCVProcessor:
         regs = self.registers
 
         if opcode == 0b0110011:          # ── Tip R ──
-            if   funct3 == 0 and funct7 == 0x00: regs[rd] = limit64(regs[rs1] + regs[rs2])          # ADD
-            elif funct3 == 0 and funct7 == 0x20: regs[rd] = limit64(regs[rs1] - regs[rs2])          # SUB
-            elif funct3 == 1:                     regs[rd] = limit64(regs[rs1] << (regs[rs2] & 0x1F))# SLL
-            elif funct3 == 2:                     regs[rd] = 1 if (regs[rs1] - regs[rs2]) >> 63 else 0 # SLT
-            elif funct3 == 3:                     regs[rd] = 1 if regs[rs1] < regs[rs2] else 0      # SLTU
-            elif funct3 == 4:                     regs[rd] = limit64(regs[rs1] ^ regs[rs2])         # XOR
-            elif funct3 == 5 and funct7 == 0x00:  regs[rd] = limit64(regs[rs1] >> (regs[rs2] & 0x1F))# SRL
-            elif funct3 == 5 and funct7 == 0x20:  regs[rd] = limit64(regs[rs1] >> (regs[rs2] & 0x1F))# SRA
-            elif funct3 == 6:                     regs[rd] = limit64(regs[rs1] | regs[rs2])         # OR
-            elif funct3 == 7:                     regs[rd] = limit64(regs[rs1] & regs[rs2])         # AND
+            if   funct3 == 0 and funct7 == 0x00: regs[rd] = limit64(regs[rs1] + regs[rs2])
+            elif funct3 == 0 and funct7 == 0x20: regs[rd] = limit64(regs[rs1] - regs[rs2])
+            elif funct3 == 1:                     regs[rd] = limit64(regs[rs1] << (regs[rs2] & 0x1F))
+            elif funct3 == 2:                     regs[rd] = 1 if (regs[rs1] - regs[rs2]) >> 63 else 0
+            elif funct3 == 3:                     regs[rd] = 1 if regs[rs1] < regs[rs2] else 0
+            elif funct3 == 4:                     regs[rd] = limit64(regs[rs1] ^ regs[rs2])
+            elif funct3 == 5 and funct7 == 0x00:  regs[rd] = limit64(regs[rs1] >> (regs[rs2] & 0x1F))
+            elif funct3 == 5 and funct7 == 0x20:  regs[rd] = limit64(regs[rs1] >> (regs[rs2] & 0x1F))
+            elif funct3 == 6:                     regs[rd] = limit64(regs[rs1] | regs[rs2])
+            elif funct3 == 7:                     regs[rd] = limit64(regs[rs1] & regs[rs2])
             result = limit16(regs[rd])
 
         elif opcode == 0b0010011:        # ── Tip I (ALU) ──
             imm = sign_extend(imm12, 12)
-            if   funct3 == 0: regs[rd] = limit64(regs[rs1] + imm)                                   # ADDI
-            elif funct3 == 1: regs[rd] = limit64(regs[rs1] << shamt)                                # SLLI
-            elif funct3 == 2: regs[rd] = limit64(regs[rs1] - imm) >> 63                             # SLTI
-            elif funct3 == 3: regs[rd] = 1 if regs[rs1] < imm else 0                                # SLTIU
-            elif funct3 == 4: regs[rd] = limit64(regs[rs1] ^ imm)                                   # XORI
-            elif funct3 == 5 and funct7 == 0x00: regs[rd] = limit64(regs[rs1] >> shamt)             # SRLI
-            elif funct3 == 5 and funct7 == 0x20: regs[rd] = limit64(regs[rs1] >> shamt)             # SRAI
-            elif funct3 == 6: regs[rd] = limit64(regs[rs1] | imm)                                   # ORI
-            elif funct3 == 7: regs[rd] = limit64(regs[rs1] & imm)                                   # ANDI
+            if   funct3 == 0: regs[rd] = limit64(regs[rs1] + imm)
+            elif funct3 == 1: regs[rd] = limit64(regs[rs1] << shamt)
+            elif funct3 == 2: regs[rd] = limit64(regs[rs1] - imm) >> 63
+            elif funct3 == 3: regs[rd] = 1 if regs[rs1] < imm else 0
+            elif funct3 == 4: regs[rd] = limit64(regs[rs1] ^ imm)
+            elif funct3 == 5 and funct7 == 0x00: regs[rd] = limit64(regs[rs1] >> shamt)
+            elif funct3 == 5 and funct7 == 0x20: regs[rd] = limit64(regs[rs1] >> shamt)
+            elif funct3 == 6: regs[rd] = limit64(regs[rs1] | imm)
+            elif funct3 == 7: regs[rd] = limit64(regs[rs1] & imm)
             result = limit16(regs[rd])
 
         elif opcode == 0b0000011:        # ── Load ──
             addr = limit64(regs[rs1] + sign_extend(imm12, 12)) % self.DATA_MEM_SIZE
-            if   funct3 == 0: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFF,        8)        # LB
-            elif funct3 == 1: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFFFF,     16)        # LH
-            elif funct3 == 2: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFFFFFFFF, 32)        # LW
-            elif funct3 == 3: regs[rd] = self.dataMemory[addr]                                      # LD
-            elif funct3 == 4: regs[rd] = self.dataMemory[addr] & 0xFF                               # LBU
-            elif funct3 == 5: regs[rd] = self.dataMemory[addr] & 0xFFFF                             # LHU
-            elif funct3 == 6: regs[rd] = self.dataMemory[addr] & 0xFFFFFFFF                         # LWU
+            if   funct3 == 0: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFF,        8)
+            elif funct3 == 1: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFFFF,     16)
+            elif funct3 == 2: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFFFFFFFF, 32)
+            elif funct3 == 3: regs[rd] = self.dataMemory[addr]
+            elif funct3 == 4: regs[rd] = self.dataMemory[addr] & 0xFF
+            elif funct3 == 5: regs[rd] = self.dataMemory[addr] & 0xFFFF
+            elif funct3 == 6: regs[rd] = self.dataMemory[addr] & 0xFFFFFFFF
             result = limit16(regs[rd])
 
         elif opcode == 0b0100011:        # ── Store ──
-            # De verificat: imm pentru Store = imm[11:5] || imm[4:0]
             imm_s = ((instr >> 25) << 5) | ((instr >> 7) & 0x1F)
             addr  = limit64(regs[rs1] + sign_extend(imm_s, 12)) % self.DATA_MEM_SIZE
-            if   funct3 == 0: self.dataMemory[addr] = regs[rs2] & 0xFF                              # SB
-            elif funct3 == 1: self.dataMemory[addr] = regs[rs2] & 0xFFFF                            # SH
-            elif funct3 == 2: self.dataMemory[addr] = regs[rs2] & 0xFFFFFFFF                        # SW
-            elif funct3 == 3: self.dataMemory[addr] = regs[rs2]                                     # SD
+            if   funct3 == 0: self.dataMemory[addr] = regs[rs2] & 0xFF
+            elif funct3 == 1: self.dataMemory[addr] = regs[rs2] & 0xFFFF
+            elif funct3 == 2: self.dataMemory[addr] = regs[rs2] & 0xFFFFFFFF
+            elif funct3 == 3: self.dataMemory[addr] = regs[rs2]
             result = limit16(self.dataMemory[addr])
 
         elif opcode == 0b0110111:        # ── LUI ──
@@ -159,7 +164,6 @@ class RISCVProcessor:
             result = limit16(regs[rd])
 
         elif opcode == 0b1101111:        # ── JAL ──
-            # imm[20|10:1|11|19:12] × 2
             jal_imm = (((instr >> 31) & 1) << 20 | ((instr >> 12) & 0xFF) << 12 |
                        ((instr >> 20) & 1) << 11  | ((instr >> 21) & 0x3FF) << 1)
             regs[rd]          = limit64(self.pc + 4)
@@ -179,12 +183,12 @@ class RISCVProcessor:
                      ((instr >> 25) & 0x3F) << 5 | ((instr >> 8) & 0xF) << 1)
             self.jumpAddress = limit64(self.pc + sign_extend(b_imm, 13))
             taken = False
-            if   funct3 == 0: taken = regs[rs1] == regs[rs2]                                        # BEQ
-            elif funct3 == 1: taken = regs[rs1] != regs[rs2]                                        # BNE
-            elif funct3 == 4: taken = bool((regs[rs1] - regs[rs2]) >> 63)                           # BLT
-            elif funct3 == 5: taken = not bool((regs[rs1] - regs[rs2]) >> 63)                       # BGE
-            elif funct3 == 6: taken = regs[rs1] < regs[rs2]                                         # BLTU
-            elif funct3 == 7: taken = regs[rs1] >= regs[rs2]                                        # BGEU
+            if   funct3 == 0: taken = regs[rs1] == regs[rs2]
+            elif funct3 == 1: taken = regs[rs1] != regs[rs2]
+            elif funct3 == 4: taken = bool((regs[rs1] - regs[rs2]) >> 63)
+            elif funct3 == 5: taken = not bool((regs[rs1] - regs[rs2]) >> 63)
+            elif funct3 == 6: taken = regs[rs1] < regs[rs2]
+            elif funct3 == 7: taken = regs[rs1] >= regs[rs2]
             self.Jump = taken
             result = limit16(self.jumpAddress if taken else 0)
 
@@ -200,21 +204,61 @@ class RISCVProcessor:
         set_pins_from_result(result)
 
     def run(self):
+        global stop_execution
         print("[CPU] Pornesc execuția...")
         while self.pc + 3 < len(self.memory):
+            # Verifică dacă trebuie să se oprească
+            if stop_execution:
+                print("[CPU] Execuție întreruptă pentru program nou.")
+                break
+            
             self.execute()
             if STEP_DELAY_MS > 0:
                 time.sleep_ms(STEP_DELAY_MS)
         print("[CPU] Program terminat.")
 
-cpu = RISCVProcessor()
+# Thread pentru execuția programelor
+def execution_thread():
+    global new_program, stop_execution
+    cpu = RISCVProcessor()
+    
+    while True:
+        # Așteaptă un program nou
+        program_lock.acquire()
+        if new_program is not None:
+            prog = new_program
+            new_program = None
+            stop_execution = False
+            program_lock.release()
+            
+            cpu.load(prog)
+            cpu.run()
+        else:
+            program_lock.release()
+            time.sleep_ms(100)
 
-while True:
-    prog = receive_program()
-    if prog is not None:
-        cpu.load(prog)
-        cpu.run()
-    else:
-        print("[PICO] Eroare recepție, aștept din nou...")
-        time.sleep_ms(1000)
+# Thread pentru recepția programelor
+def reception_thread():
+    global new_program, stop_execution
+    
+    while True:
+        prog = receive_program()
+        if prog is not None:
+            # Oprește execuția curentă și încarcă programul nou
+            program_lock.acquire()
+            stop_execution = True  # Semnalizează thread-ului de execuție să se oprească
+            new_program = prog
+            program_lock.release()
+            print("[PICO] Program nou pregătit pentru execuție.")
+        else:
+            print("[PICO] Eroare recepție, aștept din nou...")
+            time.sleep_ms(1000)
+
+# Pornire thread-uri
+print("[PICO] Pornesc thread-ul de execuție...")
+_thread.start_new_thread(execution_thread, ())
+
+print("[PICO] Pornesc thread-ul de recepție...")
+time.sleep_ms(100)  # Scurt delay pentru a permite thread-ului de execuție să pornească
+reception_thread()  # Rulează pe thread-ul principal
 
