@@ -20,40 +20,46 @@ class RegisterTable(QTableWidget):
         # font monospaced pentru valori
         font = QFont("Courier")
         
-        self.register_names = [f"x{i}" for i in range(32)]
+        self.register_keys = [f"x{i}" for i in range(32)]
+        
+        self.register_display = [
+            "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
+            "x5 (t0)", "x6 (t1)", "x7 (t2)",
+            "x8 (s0/fp)", "x9 (s1)",
+            "x10 (a0)", "x11 (a1)", "x12 (a2)", "x13 (a3)", "x14 (a4)", "x15 (a5)",
+            "x16 (a6)", "x17 (a7)",
+            "x18 (s2)", "x19 (s3)", "x20 (s4)", "x21 (s5)", "x22 (s6)", "x23 (s7)",
+            "x24 (s8)", "x25 (s9)", "x26 (s10)", "x27 (s11)",
+            "x28 (t3)", "x29 (t4)", "x30 (t5)", "x31 (t6)"
+        ]
 
         for row in range(16):
-            # Registru stânga
-            name_left = self.register_names[row]
-            self.setItem(row, 0, QTableWidgetItem(name_left))
+            self.setItem(row, 0, QTableWidgetItem(self.register_display[row]))
             item_val_left = QTableWidgetItem("0x0000000000000000")
             item_val_left.setFont(font)
             self.setItem(row, 1, item_val_left)
 
-            # Registru dreapta
-            name_right = self.register_names[row + 16]
-            self.setItem(row, 2, QTableWidgetItem(name_right))
+            self.setItem(row, 2, QTableWidgetItem(self.register_display[row + 16]))
             item_val_right = QTableWidgetItem("0x0000000000000000")
             item_val_right.setFont(font)
             self.setItem(row, 3, item_val_right)
 
-        # Lățimi coloane
-        self.setColumnWidth(0, 70)   # nume registru stânga
-        self.setColumnWidth(1, 180)  # valoare hex stânga
-        self.setColumnWidth(2, 70)   # nume registru dreapta
-        self.setColumnWidth(3, 180)  # valoare hex dreapta
+            # Lățimi coloane
+            self.setColumnWidth(0, 70)   # nume registru stânga
+            self.setColumnWidth(1, 180)  # valoare hex stânga
+            self.setColumnWidth(2, 70)   # nume registru dreapta
+            self.setColumnWidth(3, 180)  # valoare hex dreapta
 
     def update_registers(self, registers):
-        """registers = dict[str, int]"""
         for row in range(16):
-            # Registru stânga
-            name_left = self.register_names[row]
-            value_left = registers.get(name_left, 0)
+            key_left = self.register_keys[row]
+            value_left = registers.get(key_left, 0)
+            self.item(row, 0).setText(self.register_display[row])
             self.item(row, 1).setText(f"0x{value_left & 0xFFFFFFFFFFFFFFFF:016X}")
 
-            # Registru dreapta
-            name_right = self.register_names[row + 16]
-            value_right = registers.get(name_right, 0)
+            key_right = self.register_keys[row + 16]
+            value_right = registers.get(key_right, 0)
+            self.item(row, 2).setText(self.register_display[row + 16])
             self.item(row, 3).setText(f"0x{value_right & 0xFFFFFFFFFFFFFFFF:016X}")
 
 
