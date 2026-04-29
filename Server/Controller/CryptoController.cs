@@ -28,9 +28,6 @@ namespace SecureRiscVServer.Controller
                 rsa.GenerateKeys(1024);
         }
 
-        // ======================
-        // RSA public key
-        // ======================
         [HttpGet("publickey")]
         public IActionResult GetPublicKey()
         {
@@ -42,27 +39,22 @@ namespace SecureRiscVServer.Controller
             });
         }
 
-        // ======================
-        // Handshake RSA → AES
-        // ======================
         [Authorize]
         [HttpPost("handshake")]
         public IActionResult Handshake([FromBody] HandshakeRequest request)
         {
             if (request?.EncryptedKey == null || request.EncryptedKey.Count != 1)
-                return BadRequest("Expected single RSA block");
+                return BadRequest("Format incorect pentru cheie!");
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
                 return Unauthorized();
 
-            // Parse single RSA block
             BigInteger c = BigInteger.Parse(request.EncryptedKey[0]);
 
-            // Decrypt RSA
-            byte[] decryptedFull = rsa.Decrypt(c); // de obicei 128 bytes pentru RSA-1024
+            byte[] decryptedFull = rsa.Decrypt(c); 
 
-            // Luăm ultimii 32 bytes: 16 AES key + 16 IV
+            // Extragere cheie si iv 16 octeti cheie AES key + 16 octeti IV
             if (decryptedFull.Length < 32)
                 return BadRequest("Invalid AES payload");
 
@@ -70,14 +62,14 @@ namespace SecureRiscVServer.Controller
 
             var session = new SecureSession
             {
-                AesKey = decrypted[..16],  // primele 16 bytes → AES key
-                Iv = decrypted[16..32] // următorii 16 bytes → IV
+                AesKey = decrypted[..16],
+                Iv = decrypted[16..32]
             };
 
             _sessions.Set(userId, session);
 
-            Console.WriteLine($"[Handshake] OK for {userId}");
-            Console.WriteLine($"AES Key: {BitConverter.ToString(session.AesKey)}");
+            Console.WriteLine($"[Handshake] OK pentru {userId}");
+            Console.WriteLine($"Cheie AES: {BitConverter.ToString(session.AesKey)}");
             Console.WriteLine($"IV:      {BitConverter.ToString(session.Iv)}");
 
             return Ok();
@@ -93,7 +85,7 @@ namespace SecureRiscVServer.Controller
 
             var session = _sessions.Get(userId);
             if (session == null)
-                return BadRequest("No AES session");
+                return BadRequest("Nu este definita sesiune!");
 
             var instructions = _instructionQueue.GetAll(userId);
 

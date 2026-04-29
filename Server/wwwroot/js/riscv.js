@@ -225,9 +225,8 @@ async function sendInstructions() {
     .map(l => l.trim())
     .filter(l => l.length > 0 && !l.startsWith("#"));
 
-
     if (lines.length === 0) {
-        statusEl.textContent = "❌ Introdu cel puțin o instrucțiune.";
+        statusEl.textContent = "❌ Va rog să introduceți cel puțin o instrucțiune!";
         return;
     }
 
@@ -243,7 +242,6 @@ async function sendInstructions() {
         return;
     }
 
-    // terminator (ECALL sau marker)
     machine.push("0xFFFFFFFF");
     const token = sessionStorage.getItem("token");
     const response = await fetch("/api/crypto/program", {

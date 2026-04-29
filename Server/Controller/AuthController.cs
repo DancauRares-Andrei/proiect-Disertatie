@@ -28,12 +28,11 @@ namespace SecureRiscVServer.Components
                 .FirstOrDefaultAsync(u => u.Username == request.Username);
 
             if (user == null)
-                return Unauthorized("User not found");
+                return Unauthorized("Utilizatorul nu a putut fi identificat!");
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                return Unauthorized("Invalid credentials");
+                return Unauthorized("Utilizator sau parola incorecte!");
 
-            // Crează partea claims pentru JWT
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
