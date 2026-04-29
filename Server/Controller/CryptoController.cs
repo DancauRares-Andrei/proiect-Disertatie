@@ -84,38 +84,6 @@ namespace SecureRiscVServer.Controller
         }
 
         [Authorize]
-        [HttpPost("instructions")]
-        public IActionResult UploadInstructions(
-            [FromBody] InstructionUploadRequest request,
-            [FromServices] InstructionQueue queue)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
-                return Unauthorized();
-
-            var parsed = new List<uint>();
-
-            foreach (var s in request.Instructions)
-            {
-                if (!uint.TryParse(
-                    s.Replace("0x", ""),
-                    System.Globalization.NumberStyles.HexNumber,
-                    null,
-                    out var value))
-                {
-                    return BadRequest($"Invalid instruction: {s}");
-                }
-
-                parsed.Add(value);
-            }
-
-            queue.Enqueue(userId, parsed);
-
-            return Ok($"Queued {parsed.Count} instructions");
-        }
-
-
-        [Authorize]
         [HttpGet("program")]
         public IActionResult GetProgram()
         {

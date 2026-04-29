@@ -33,7 +33,7 @@ namespace SecureRiscVServer.Components
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return Unauthorized("Invalid credentials");
 
-            // Crează claims pentru JWT
+            // Crează partea claims pentru JWT
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
