@@ -51,8 +51,8 @@ class ProcessorRunner:
 # Secure Client
 # ======================
 class SecureClient:
-    def __init__(self, email, password, processor, runner):
-        self.email = email
+    def __init__(self, username, password, processor, runner):
+        self.username = username
         self.password = password
         self.jwt = None
         self.aes = AESClient()
@@ -62,7 +62,7 @@ class SecureClient:
     def login(self):
         r = requests.post(
             f"{SERVER}/api/auth/login",
-            json={"username": self.email, "password": self.password}
+            json={"username": self.username, "password": self.password}
         )
         r.raise_for_status()
         self.jwt = r.json()["token"]
@@ -95,9 +95,6 @@ class SecureClient:
             if r.status_code == 204:
                 time.sleep(2)
                 continue
-            #if r.status_code == 400:
-            #    time.sleep(2)
-            #    continue
 
             r.raise_for_status()
 
