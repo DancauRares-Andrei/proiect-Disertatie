@@ -21,9 +21,6 @@ class RSAClient:
         m = int.from_bytes(data, "big")
         return pow(m, self.e, self.n)
 
-# ======================
-# Processor runner
-# ======================
 class ProcessorRunner:
     def __init__(self, processor):
         self.processor = processor
@@ -46,10 +43,6 @@ class ProcessorRunner:
             self.processor.stop()
             self.exec_thread.join(timeout=1)
 
-
-# ======================
-# Secure Client
-# ======================
 class SecureClient:
     def __init__(self, username, password, processor, runner):
         self.username = username
@@ -73,7 +66,6 @@ class SecureClient:
         j = r.json()
         return RSAClient(j["e"], j["n"])
 
-    # -------- HANDSHAKE --------
     def handshake(self, rsa: RSAClient):
         payload = self.aes.key + self.aes.iv
         encrypted = rsa.encrypt_block(payload)
@@ -103,17 +95,11 @@ class SecureClient:
 
             self.runner.start_program(plaintext)
 
-
-# ======================
-# MAIN (client.py)
-# ======================
 app = QApplication(sys.argv)
 
-# UN SINGUR procesor
 processor = RISCVProcessor()
 runner = ProcessorRunner(processor)
 
-# UI
 window = LedPanel(processor)
 processor.signals.step_done.connect(
     window.reg_table.update_registers
@@ -123,7 +109,6 @@ processor.signals.print_text.connect(window.append_text)
 processor.signals.reset_text.connect(window.reset_text)
 window.show()
 
-# Client
 client = SecureClient(
     "software",
     "2F7NJdA85qw_BXV",
@@ -137,7 +122,6 @@ client.handshake(rsa)
 
 window.textbox.setPlainText("Handshake complet!")
 
-# Thread polling server
 threading.Thread(
     target=client.loop,
     daemon=True

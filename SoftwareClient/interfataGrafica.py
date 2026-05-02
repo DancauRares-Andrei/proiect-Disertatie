@@ -5,19 +5,15 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPainter, QColor, QFont
 from PyQt6.QtCore import Qt
 
-
-# =========================
-# REGISTER TABLE
-# =========================
 class RegisterTable(QTableWidget):
     def __init__(self):
-        super().__init__(16, 4)  # 16 rânduri, 4 coloane (2 registre pe rând)
+        super().__init__(16, 4)  # 16 randuri, 4 coloane (2 registre pe rand)
 
         self.setHorizontalHeaderLabels(["Registru", "Valoare (hex)", "Registru", "Valoare (hex)"])
         self.verticalHeader().setVisible(False)
         self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
-        # font monospaced pentru valori
+        # font Courier pentru valori
         font = QFont("Courier")
         
         self.register_keys = [f"x{i}" for i in range(32)]
@@ -44,9 +40,9 @@ class RegisterTable(QTableWidget):
             item_val_right.setFont(font)
             self.setItem(row, 3, item_val_right)
 
-            # Lățimi coloane
-            self.setColumnWidth(0, 70)   # nume registru stânga
-            self.setColumnWidth(1, 180)  # valoare hex stânga
+            # Latimi coloane
+            self.setColumnWidth(0, 70)   # nume registru stanga
+            self.setColumnWidth(1, 180)  # valoare hex stanga
             self.setColumnWidth(2, 70)   # nume registru dreapta
             self.setColumnWidth(3, 180)  # valoare hex dreapta
 
@@ -62,11 +58,6 @@ class RegisterTable(QTableWidget):
             self.item(row, 2).setText(self.register_display[row + 16])
             self.item(row, 3).setText(f"0x{value_right & 0xFFFFFFFFFFFFFFFF:016X}")
 
-
-
-# =========================
-# LED
-# =========================
 class LedCircle(QWidget):
     def __init__(self, diameter=25):
         super().__init__()
@@ -88,10 +79,6 @@ class LedCircle(QWidget):
         self.on = state
         self.update()
 
-
-# =========================
-# MAIN PANEL
-# =========================
 class LedPanel(QWidget):
     def __init__(self, processor):
         super().__init__()
@@ -102,7 +89,6 @@ class LedPanel(QWidget):
 
         main_layout = QHBoxLayout(self)
 
-        # ================= LEFT =================
         left_layout = QVBoxLayout()
 
         led_layout = QHBoxLayout()
@@ -115,11 +101,10 @@ class LedPanel(QWidget):
         left_layout.addLayout(led_layout)
 
         self.textbox = QTextEdit()
-        self.textbox.setPlaceholderText("Ieșire / debug")
+        self.textbox.setPlaceholderText("Iesire / debug")
         self.textbox.setReadOnly(True)
         left_layout.addWidget(self.textbox)
 
-        # ================= RIGHT =================
         self.reg_table = RegisterTable()
 
         main_layout.addLayout(left_layout, 1)

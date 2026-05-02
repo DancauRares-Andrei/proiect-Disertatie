@@ -52,7 +52,6 @@ class RISCVProcessor:
         self.jumpAddress = 0
         self.registers = [128 if i == 2 else 0 for i in range(32)]
         self.dataMemory = [0] * 129
-        #self.memory = [0] * 176
         self.instruction = 0
         self.opcode = 0
         self.funct3 = 0

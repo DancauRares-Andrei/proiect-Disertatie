@@ -1,7 +1,3 @@
-# ===============================
-# AES CONSTANTS
-# ===============================
-
 SBOX = [
 0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76,
 0xCA,0x82,0xC9,0x7D,0xFA,0x59,0x47,0xF0,0xAD,0xD4,0xA2,0xAF,0x9C,0xA4,0x72,0xC0,
@@ -43,9 +39,7 @@ INV_SBOX = [
 
 RCON = [0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1B,0x36]
 
-# ===============================
-# KEY EXPANSION
-# ===============================
+def sub_bytes(s): return [SBOX[b] for b in s]
 
 def key_expansion(key: bytes):
     w = [list(key[i:i+4]) for i in range(0, 16, 4)]
@@ -53,16 +47,11 @@ def key_expansion(key: bytes):
         temp = w[i-1].copy()
         if i % 4 == 0:
             temp = temp[1:] + temp[:1]
-            temp = [SBOX[b] for b in temp]
+            temp = sub_bytes(temp)
             temp[0] ^= RCON[(i//4)-1]
         w.append([w[i-4][j] ^ temp[j] for j in range(4)])
     return w
 
-# ===============================
-# AES PRIMITIVES
-# ===============================
-
-def sub_bytes(s): return [SBOX[b] for b in s]
 def inv_sub_bytes(s): return [INV_SBOX[b] for b in s]
 
 def shift_rows(s):
@@ -121,10 +110,6 @@ def add_round_key(s,w,r):
             s[4*i+j]^=w[r*4+i][j]
     return s
 
-# ===============================
-# BLOCK ENCRYPT / DECRYPT
-# ===============================
-
 def aes_encrypt_block(b,k):
     s=list(b); w=key_expansion(k)
     s=add_round_key(s,w,0)
@@ -144,10 +129,6 @@ def aes_decrypt_block(b,k):
     s=inv_shift_rows(s); s=inv_sub_bytes(s)
     s=add_round_key(s,w,0)
     return bytes(s)
-
-# ===============================
-# PKCS7 + CBC CLIENT
-# ===============================
 
 def pkcs7_unpad(d): return d[:-d[-1]]
 def xor(a,b): return bytes(x^y for x,y in zip(a,b))
