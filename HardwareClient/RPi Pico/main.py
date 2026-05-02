@@ -73,7 +73,7 @@ def receive_program():
 
 class RISCVProcessor:
 
-    DATA_MEM_SIZE = 100
+    DATA_MEM_SIZE = 129
 
     def __init__(self):
         self.pc          = 0
