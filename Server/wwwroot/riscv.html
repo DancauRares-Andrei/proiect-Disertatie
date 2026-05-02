@@ -29,8 +29,10 @@
                 <option value="">-- Selectează un program --</option>
                 <option value="program_add_lw">Add & Load Word</option>
                 <option value="program_counter">Counter</option>
+                <option value="program_functie">Funcție</option>
                 <option value="program_mare">Program Mare</option>
                 <option value="program_paritate">Paritate</option>
+                <option value="program_procedura">Procedură</option>
                 <option value="program_sll_xor">SLL & XOR</option>
                 <option value="program_stocari_extrageri">Stocări & Extrageri</option>
                 <option value="program_suma">Sumă</option>
@@ -69,6 +71,36 @@ addi t1, zero, 10
 addi t2, zero, 1
 sub t1, t1, t2
 bne t1, zero, -4
+jalr ra, 0(zero)`,
+            
+            "program_functie": `# Program: Funcție simplă
+addi sp, sp, -32
+sd ra, 24(sp)
+sd s0, 16(sp)
+addi s0, sp, 32
+addi a0, zero, 2
+auipc x1, 0 
+jal x1, 32
+sd a0, -24(s0)
+addi a5, zero, 0
+add a0, zero, a5
+ld ra, 24(sp)
+ld s0, 16(sp)
+addi sp, sp, 32
+jal ra, 56
+addi sp, sp, -32
+sd s0, 24(sp)
+addi s0, sp, 32
+sd a0, -24(s0)
+add a4, zero, a0
+add a5, zero, a4
+slli a5, a5, 1
+add a5, a5, a4
+addi a5, a5, 1
+add a0, zero, a5
+ld s0, 24(sp)
+addi sp, sp, 32
+jalr ra, 28(zero)
 jalr ra, 0(zero)`,
             
             "program_mare": `# Program: Exemplu mai complex
@@ -126,6 +158,22 @@ jal t1, 8
 addi t0, zero, 888
 jalr ra, 0(zero)`,
             
+            "program_procedura": `# Program: Procedură cu parametri
+auipc ra, 0
+jal ra, 12
+addi zero, zero, 0
+jal ra, 40
+addi sp, sp, -4
+sw ra, 0(sp)
+addi a0, zero, 5
+addi a1, zero, 3
+addi a0, a0, 2
+add a0, a0, a1
+lw ra, 0(sp)
+addi sp, sp, 4
+jalr t0, 0(ra)
+addi zero, zero, 0
+jalr ra, 0(zero)`,
             
             "program_sll_xor": `# Program: Operații shift și XOR
 addi gp, zero, 10

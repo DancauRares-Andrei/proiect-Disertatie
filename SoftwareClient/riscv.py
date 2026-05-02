@@ -25,6 +25,9 @@ def limit64bits(number):
 #Functie de trunchiere a unui numar la 16 de biti
 def limit16bits(number):
     return number&0xFFFF
+#Functie pentru limitarea acesului la memorie
+def limit7bits(number):
+    return number&0x7F
 REGISTER_NAMES = [
     "x0", "x1", "x2", "x3", "x4",
     "x5", "x6", "x7",
@@ -47,8 +50,8 @@ class RISCVProcessor:
         self.regdif = 0
         self.Jump = False
         self.jumpAddress = 0
-        self.registers = [0] * 32
-        self.dataMemory = [0] * 100
+        self.registers = [128 if i == 2 else 0 for i in range(32)]
+        self.dataMemory = [0] * 129
         #self.memory = [0] * 176
         self.instruction = 0
         self.opcode = 0
@@ -180,31 +183,31 @@ class RISCVProcessor:
         elif self.opcode == 0b0000011:  # Instructiuni Load
 
             if self.funct3 == 0b000:  # LB
-                self.registers[self.rd]=sign_extend(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xff,8)
+                self.registers[self.rd]=sign_extend(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xff,8)
                 self.result=limit16bits(self.registers[self.rd])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b001: #LH  
-                self.registers[self.rd]=sign_extend(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFF,16)
+                self.registers[self.rd]=sign_extend(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFF,16)
                 self.result=limit16bits(self.registers[self.rd])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b010: #LW
-                self.registers[self.rd]=sign_extend(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFFFFFF,32)
+                self.registers[self.rd]=sign_extend(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFFFFFF,32)
                 self.result=limit16bits(self.registers[self.rd])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b011: #LD
-                self.registers[self.rd]=sign_extend(limit64bits(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]),64)
+                self.registers[self.rd]=sign_extend(limit64bits(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]),64)
                 self.result=limit16bits(self.registers[self.rd])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b100: #LBU
-                self.registers[self.rd]=self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFF
+                self.registers[self.rd]=self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFF
                 self.result=limit16bits(self.registers[self.rd])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b101: #LHU
-                self.registers[self.rd]=self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFF
+                self.registers[self.rd]=self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFF
                 self.result=limit16bits(self.registers[self.rd])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b110: #LWU
-                self.registers[self.rd]=self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFFFFFF
+                self.registers[self.rd]=self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]&0xFFFFFFFF
                 self.result=limit16bits(self.registers[self.rd])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             else:
@@ -212,23 +215,23 @@ class RISCVProcessor:
         elif self.opcode == 0b0100011:  # Instructiuni Store; Pentru aceste instructiuni, imm12 se calculeaza intr-un mod diferit
             if self.funct3== 0b000:  # SB 
                 self.imm12=((instruction>>25)<<7)|((instruction>>7)&0b11111)
-                self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]&0xff
-                self.result=limit16bits(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
+                self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]&0xff
+                self.result=limit16bits(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b001: #SH
                 self.imm12=((instruction>>25)<<7)|((instruction>>7)&0b11111)
-                self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]&0xFFFF
-                self.result=limit16bits(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
+                self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]&0xFFFF
+                self.result=limit16bits(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b010: #SW
                 self.imm12=((instruction>>25)<<7)|((instruction>>7)&0b11111)
-                self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]&0xFFFFFFFF
-                self.result=limit16bits(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
+                self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]&0xFFFFFFFF
+                self.result=limit16bits(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             elif self.funct3 == 0b011: #SD
                 self.imm12=((instruction>>25)<<7)|((instruction>>7)&0b11111)
-                self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]
-                self.result=limit16bits(self.dataMemory[limit64bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
+                self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))]=self.registers[self.rs2]
+                self.result=limit16bits(self.dataMemory[limit7bits(self.registers[self.rs1]+sign_extend(self.imm12,12))])
                 self.signals.print_text.emit(f"PC: {hex(self.pc)}, result: {hex(self.result)}")
             else:
                 self.result=0    

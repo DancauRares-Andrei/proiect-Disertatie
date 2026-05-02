@@ -30,6 +30,9 @@ def limit64(n):
 def limit16(n):
     return n & 0xFFFF
 
+def limit7(n):
+    return n & 0x7F
+
 def uart_read_exact(n, timeout_ms=10000):
     buf = bytearray()
     deadline = time.ticks_add(time.ticks_ms(), timeout_ms)
@@ -85,7 +88,7 @@ class RISCVProcessor:
         self.pc          = 0
         self.Jump        = False
         self.jumpAddress = 0
-        self.registers   = [0] * 32
+        self.registers = [128 if i == 2 else 0 for i in range(32)]
         self.dataMemory  = [0] * self.DATA_MEM_SIZE
         print(f"[CPU] Program încărcat: {len(program)} bytes.")
 
@@ -136,7 +139,7 @@ class RISCVProcessor:
             result = limit16(regs[rd])
 
         elif opcode == 0b0000011:        # ── Load ──
-            addr = limit64(regs[rs1] + sign_extend(imm12, 12)) % self.DATA_MEM_SIZE
+            addr = limit7(regs[rs1] + sign_extend(imm12, 12))
             if   funct3 == 0: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFF,        8)
             elif funct3 == 1: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFFFF,     16)
             elif funct3 == 2: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFFFFFFFF, 32)
@@ -148,7 +151,7 @@ class RISCVProcessor:
 
         elif opcode == 0b0100011:        # ── Store ──
             imm_s = ((instr >> 25) << 5) | ((instr >> 7) & 0x1F)
-            addr  = limit64(regs[rs1] + sign_extend(imm_s, 12)) % self.DATA_MEM_SIZE
+            addr  = limit7(regs[rs1] + sign_extend(imm_s, 12))
             if   funct3 == 0: self.dataMemory[addr] = regs[rs2] & 0xFF
             elif funct3 == 1: self.dataMemory[addr] = regs[rs2] & 0xFFFF
             elif funct3 == 2: self.dataMemory[addr] = regs[rs2] & 0xFFFFFFFF
