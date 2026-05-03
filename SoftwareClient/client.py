@@ -56,7 +56,7 @@ class SecureClient:
         r = requests.post(
             f"{SERVER}/api/auth/login",
             json={"username": self.username, "password": self.password}
-        )
+            )
         r.raise_for_status()
         self.jwt = r.json()["token"]
 
