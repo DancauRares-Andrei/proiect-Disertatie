@@ -90,7 +90,7 @@ class RISCVProcessor:
         self.jumpAddress = 0
         self.registers = [128 if i == 2 else 0 for i in range(32)]
         self.dataMemory  = [0] * self.DATA_MEM_SIZE
-        print(f"[CPU] Program încărcat: {len(program)} bytes.")
+        print(f"[CPU] Program încărcat: {len(program)} octeti.")
 
     def _fetch(self):
         pc = self.pc
@@ -264,4 +264,5 @@ _thread.start_new_thread(execution_thread, ())
 print("[PICO] Pornesc thread-ul de recepție...")
 time.sleep_ms(100)  # Scurt delay pentru a permite thread-ului de execuție să pornească
 reception_thread()  # Rulează pe thread-ul principal
+
 
