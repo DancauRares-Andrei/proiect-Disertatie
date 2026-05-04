@@ -323,7 +323,7 @@ bool do_sendHandshake(const BigInt &rsa_e, const BigInt &rsa_n){
 }
 
 bool send_to_pico(const uint8_t *prog, int len){
-  Serial.printf("[UART] Trimit %d bytes catre Pico...\n", len);
+  Serial.printf("[UART] Trimit %d octeti catre Pico...\n", len);
 
   uint8_t header[4] = {
     (uint8_t)(len >> 24),
@@ -386,7 +386,7 @@ void fetchAndSend(){
   free(enc);
 
   int plainLen=pkcs7_unpad(plain,encLen);
-  Serial.printf("[PROGRAM] Decriptat: %d bytes. Trimit pe UART...\n", plainLen);
+  Serial.printf("[PROGRAM] Decriptat: %d octeti. Trimit pe UART...\n", plainLen);
 
   send_to_pico(plain, plainLen);
   free(plain);
@@ -411,7 +411,7 @@ void setup(){
   generateAES();
   while(!do_sendHandshake(rsa_e,rsa_n)){ Serial.println("[HANDSHAKE] Reincerc..."); delay(3000); }
 
-  Serial.println("[SETUP] Gata. Pornesc polling...");
+  Serial.println("[SETUP] Gata. Sunt pregatit sa receptionez programe...");
 }
 
 void loop(){

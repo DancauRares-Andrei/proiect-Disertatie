@@ -54,7 +54,7 @@ def receive_program():
         return None
 
     length = (header[0] << 24) | (header[1] << 16) | (header[2] << 8) | header[3]
-    print(f"[PICO] Lungime program: {length} bytes")
+    print(f"[PICO] Lungime program: {length} octeti")
 
     if length == 0 or length > 65536:
         print("[PICO] Lungime invalida!")
@@ -68,7 +68,7 @@ def receive_program():
         return None
 
     uart.write(b"OK\n")
-    print(f"[PICO] Program recepționat ({length} bytes).")
+    print(f"[PICO] Program recepționat ({length} octeti).")
     return bytearray(prog)
 
 class RISCVProcessor:

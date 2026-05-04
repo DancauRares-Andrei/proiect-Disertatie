@@ -114,8 +114,10 @@ class LedPanel(QWidget):
         for i in range(16):
             bit = (result >> i) & 1
             self.leds[15 - i].set_state(bit == 1)
+
     def append_text(self, text):
         self.textbox.append(text)
+
     def reset_text(self):
         self.textbox.setPlainText("")
 
