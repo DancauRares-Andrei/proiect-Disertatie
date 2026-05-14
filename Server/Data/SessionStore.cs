@@ -15,5 +15,4 @@ namespace SecureRiscVServer.Data
         public void Remove(string userId)
             => _sessions.TryRemove(userId, out _);
     }
-
 }

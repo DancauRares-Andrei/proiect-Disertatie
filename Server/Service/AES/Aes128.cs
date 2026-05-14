@@ -9,7 +9,7 @@ namespace SecureRiscVServer.Service.AES
         public Aes128(byte[] key)
         {
             if (key.Length != 16)
-                throw new ArgumentException("AES-128 key must be 16 bytes");
+                throw new ArgumentException("Cheia AES-128 trebuie sa aiba 16 octeti");
             roundKeys = KeyExpansion(key);
         }
 
@@ -32,8 +32,6 @@ namespace SecureRiscVServer.Service.AES
 
             return FromState(s);
         }
-
-        // ===== AES steps =====
 
         private static void SubBytes(byte[,] s)
         {
@@ -79,8 +77,6 @@ namespace SecureRiscVServer.Service.AES
             }
             return p;
         }
-
-        // ===== Key expansion =====
 
         private static byte[] KeyExpansion(byte[] key)
         {
