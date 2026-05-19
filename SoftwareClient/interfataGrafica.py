@@ -13,7 +13,6 @@ class RegisterTable(QTableWidget):
         self.verticalHeader().setVisible(False)
         self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
-        # font Courier pentru valori
         font = QFont("Courier")
         
         self.register_keys = [f"x{i}" for i in range(32)]

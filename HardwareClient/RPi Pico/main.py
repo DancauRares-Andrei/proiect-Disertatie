@@ -112,7 +112,7 @@ class RISCVProcessor:
 
         regs = self.registers
 
-        if opcode == 0b0110011:          # ── Tip R ──
+        if opcode == 0b0110011:          # Tip R 
             if   funct3 == 0 and funct7 == 0x00: regs[rd] = limit64(regs[rs1] + regs[rs2])
             elif funct3 == 0 and funct7 == 0x20: regs[rd] = limit64(regs[rs1] - regs[rs2])
             elif funct3 == 1:                     regs[rd] = limit64(regs[rs1] << (regs[rs2] & 0x1F))
@@ -125,7 +125,7 @@ class RISCVProcessor:
             elif funct3 == 7:                     regs[rd] = limit64(regs[rs1] & regs[rs2])
             result = limit16(regs[rd])
 
-        elif opcode == 0b0010011:        # ── Tip I (ALU) ──
+        elif opcode == 0b0010011:        #  Tip I (ALU) 
             imm = sign_extend(imm12, 12)
             if   funct3 == 0: regs[rd] = limit64(regs[rs1] + imm)
             elif funct3 == 1: regs[rd] = limit64(regs[rs1] << shamt)
@@ -138,7 +138,7 @@ class RISCVProcessor:
             elif funct3 == 7: regs[rd] = limit64(regs[rs1] & imm)
             result = limit16(regs[rd])
 
-        elif opcode == 0b0000011:        # ── Load ──
+        elif opcode == 0b0000011:        #  Load 
             addr = limit7(regs[rs1] + sign_extend(imm12, 12))
             if   funct3 == 0: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFF,        8)
             elif funct3 == 1: regs[rd] = sign_extend(self.dataMemory[addr] & 0xFFFF,     16)
@@ -149,7 +149,7 @@ class RISCVProcessor:
             elif funct3 == 6: regs[rd] = self.dataMemory[addr] & 0xFFFFFFFF
             result = limit16(regs[rd])
 
-        elif opcode == 0b0100011:        # ── Store ──
+        elif opcode == 0b0100011:        #  Store 
             imm_s = ((instr >> 25) << 5) | ((instr >> 7) & 0x1F)
             addr  = limit7(regs[rs1] + sign_extend(imm_s, 12))
             if   funct3 == 0: self.dataMemory[addr] = regs[rs2] & 0xFF
@@ -158,15 +158,15 @@ class RISCVProcessor:
             elif funct3 == 3: self.dataMemory[addr] = regs[rs2]
             result = limit16(self.dataMemory[addr])
 
-        elif opcode == 0b0110111:        # ── LUI ──
+        elif opcode == 0b0110111:        #  LUI 
             regs[rd] = limit64(sign_extend(instr >> 12, 20) << 12)
             result = limit16(regs[rd])
 
-        elif opcode == 0b0010111:        # ── AUIPC ──
+        elif opcode == 0b0010111:        #  AUIPC 
             regs[rd] = limit64(self.pc + (sign_extend(instr >> 12, 20) << 12))
             result = limit16(regs[rd])
 
-        elif opcode == 0b1101111:        # ── JAL ──
+        elif opcode == 0b1101111:        #  JAL 
             jal_imm = (((instr >> 31) & 1) << 20 | ((instr >> 12) & 0xFF) << 12 |
                        ((instr >> 20) & 1) << 11  | ((instr >> 21) & 0x3FF) << 1)
             regs[rd]          = limit64(self.pc + 4)
@@ -174,14 +174,14 @@ class RISCVProcessor:
             self.Jump         = True
             result            = limit16(self.jumpAddress)
 
-        elif opcode == 0b1100111:        # ── JALR ──
+        elif opcode == 0b1100111:        #  JALR 
             target            = limit64(regs[rs1] + sign_extend(imm12, 12)) & ~1
             regs[rd]          = limit64(self.pc + 4)
             self.jumpAddress  = target
             self.Jump         = True
             result            = limit16(self.jumpAddress)
 
-        elif opcode == 0b1100011:        # ── Branch ──
+        elif opcode == 0b1100011:        #  Branch 
             b_imm = (((instr >> 31) & 1) << 12 | ((instr >> 7) & 1) << 11 |
                      ((instr >> 25) & 0x3F) << 5 | ((instr >> 8) & 0xF) << 1)
             self.jumpAddress = limit64(self.pc + sign_extend(b_imm, 13))

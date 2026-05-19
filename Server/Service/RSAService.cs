@@ -33,12 +33,12 @@ namespace SecureRiscVServer.Service
         {
             BigInteger m = BigInteger.ModPow(cipher, PrivateKey.d, PrivateKey.n);
 
-            // Obținem exact 48 bytes în big-endian, unsigned
+            // Obtinem exact 48 bytes in big-endian, unsigned
             byte[] bytes = m.ToByteArray(isUnsigned: true, isBigEndian: true);
 
             if (bytes.Length < 48)
             {
-                // Prepend cu zerouri dacă e nevoie
+                // Completare cu zerouri dacă e nevoie
                 byte[] padded = new byte[48];
                 Buffer.BlockCopy(bytes, 0, padded, 48 - bytes.Length, bytes.Length);
                 bytes = padded;

@@ -27,23 +27,23 @@
     </div>
 
     <script>
-        // Verificăm dacă utilizatorul este autentificat
+        // Verificare autentificare
         document.addEventListener("DOMContentLoaded", () => {
             const token = sessionStorage.getItem("token");
             
             if (token) {
-                // Utilizator autentificat - ascundem login, arătăm RISC-V și logout
+                // Utilizator autentificat
                 document.getElementById("loginMenuItem").style.display = "none";
                 document.getElementById("riscvMenuItem").style.display = "block";
                 document.getElementById("logoutMenuItem").style.display = "block";
             } else {
-                // Utilizator neautentificat - arătăm login, ascundem RISC-V și logout
+                // Utilizator neautentificat
                 document.getElementById("loginMenuItem").style.display = "block";
                 document.getElementById("riscvMenuItem").style.display = "none";
                 document.getElementById("logoutMenuItem").style.display = "none";
             }
 
-            // Handler pentru logout
+            // Logout
             document.getElementById("logoutLink").addEventListener("click", (e) => {
                 e.preventDefault();
                 sessionStorage.removeItem("token");

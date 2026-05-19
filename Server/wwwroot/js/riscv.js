@@ -50,7 +50,7 @@ function assembleLine(line) {
     const parts = line.replace(/,/g, "").split(/\s+/);
     const op = parts[0];
 
-    // Funcție ajutătoare pentru a parsa registrul
+    // Funcție pentru parsare registru
     function parseReg(r) {
         if (!r.startsWith("x")) r = REG_ALIAS[r];
         if (!r || !r.startsWith("x")) throw `Registru invalid: ${r}`;
@@ -59,7 +59,7 @@ function assembleLine(line) {
         return v;
     }
 
-    // R-type (add, sub, and, or, xor, sll, srl, sra, sltu, slt)
+    // Tip R (add, sub, and, or, xor, sll, srl, sra, sltu, slt)
     const R_OPS = {
         add: [0b0110011, 0b000, 0b0000000],
         sub: [0b0110011, 0b000, 0b0100000],
@@ -73,7 +73,7 @@ function assembleLine(line) {
         sltu: [0b0110011, 0b011, 0b0000000]
     };
 
-    // I-type (addi, andi, ori, xori, slli, srli, srai, slti, sltiu)
+    // Tip I (addi, andi, ori, xori, slli, srli, srai, slti, sltiu)
     const I_OPS = {
         addi: [0b0010011, 0b000, 0b0000000],
         andi: [0b0010011, 0b111, 0b0000000],
@@ -118,7 +118,7 @@ function assembleLine(line) {
     const OTHERS = ["lui", "auipc"];
 
     if (parts.length === 4) {
-        // R-type sau I-type cu 3 argumente
+        // Tip R sau I cu 3 argumente
         if (op in R_OPS) {
             const rd = parseReg(parts[1]);
             const rs1 = parseReg(parts[2]);
@@ -129,16 +129,16 @@ function assembleLine(line) {
             const rd = parseReg(parts[1]);
             const rs1 = parseReg(parts[2]);
             let imm = parseInt(parts[3]);
-            if (isNaN(imm)) throw `Imediatul invalid: ${parts[3]}`;
-            if (imm < -2048 || imm > 2047) throw `Imediatul în afara limitei: ${imm}`;
+            if (isNaN(imm)) throw `Valoare imediata invalida: ${parts[3]}`;
+            if (imm < -2048 || imm > 2047) throw `Valoare imediata in afara limitei: ${imm}`;
             const [opcode, funct3, funct7] = I_OPS[op];
             return limit32bits(opcode | (rd << 7) | (funct3 << 12) | (rs1 << 15) | ((imm & 0xFFF) << 20) | (funct7 << 25));
         } else if (op in BRANCH) {
             const rs1 = parseReg(parts[1]);
             const rs2 = parseReg(parts[2]);
             let imm = parseInt(parts[3]);
-            if (isNaN(imm)) throw `Imediatul invalid: ${parts[3]}`;
-            if (imm < -2048 || imm > 2047) throw `Imediatul în afara limitei: ${imm}`;
+            if (isNaN(imm)) throw `Valoare imediata invalida: ${parts[3]}`;
+            if (imm < -2048 || imm > 2047) throw `Valoare imediata in afara limitei: ${imm}`;
             const opcode = 0b1100011;
             const funct3 = BRANCH[op];
             // codificare offset branch
@@ -158,7 +158,7 @@ function assembleLine(line) {
             let offsetRs1 = parts[2].split("(");
             let imm = parseInt(offsetRs1[0]);
             const rs1 = parseReg(offsetRs1[1].replace(")", ""));
-            if (isNaN(imm)) throw `Imediatul invalid: ${offsetRs1[0]}`;
+            if (isNaN(imm)) throw `Valoare imediata invalida: ${offsetRs1[0]}`;
             const opcode = 0b0000011;
             const funct3 = LOADS[op];
             return limit32bits(opcode | (rd << 7) | (funct3 << 12) | (rs1 << 15) | ((imm & 0xFFF) << 20));
@@ -172,12 +172,12 @@ function assembleLine(line) {
             if (!offsetRs1) throw `Format invalid pentru store: ${parts[2]}`;
             let imm = parseInt(offsetRs1[1]);
             const rs1 = parseReg(offsetRs1[2]);
-            if (isNaN(imm)) throw `Imediatul invalid: ${offsetRs1[1]}`;
+            if (isNaN(imm)) throw `Valoare imediata invalida: ${offsetRs1[1]}`;
 
             const opcode = 0b0100011;
             const funct3 = STORES[op];
 
-            // codificare S-type
+            // codificare tip S
             return limit32bits(opcode |
                 ((imm & 0x1F) << 7) | // imm[4:0]
                 (funct3 << 12) |
@@ -188,14 +188,14 @@ function assembleLine(line) {
         else if (OTHERS.includes(op)) {
             const rd = parseReg(parts[1]);
             let imm = parseInt(parts[2]);
-            if (isNaN(imm)) throw `Imediatul invalid: ${parts[2]}`;
+            if (isNaN(imm)) throw `Valoare imediata invalida: ${parts[2]}`;
             const opcode = op === "lui" ? 0b0110111 : 0b0010111;
             return opcode | (rd << 7) | ((imm & 0xFFFFF) << 12);
         } else if (JUMPS.includes(op)) {
             const rd = parseReg(parts[1]);
             if (op === "jal") {
                 let imm = parseInt(parts[2]);
-                if (isNaN(imm)) throw `Imediatul invalid: ${parts[2]}`;
+                if (isNaN(imm)) throw `Valoare imediata invalida: ${parts[2]}`;
                 const opcode = 0b1101111;
                 return limit32bits(opcode | (rd << 7) |
                     (((imm >> 20) & 1) << 31) |
@@ -241,7 +241,7 @@ async function sendInstructions() {
         statusEl.textContent = "❌ " + err;
         return;
     }
-
+    //terminator
     machine.push("0xFFFFFFFF");
     const token = sessionStorage.getItem("token");
     const response = await fetch("/api/crypto/program", {
@@ -257,7 +257,6 @@ async function sendInstructions() {
 
     if (response.ok) {
         statusEl.textContent = `✅ Program trimis (${machine.length - 1} instrucțiuni).`;
-        //textarea.value = "";
     } else {
         statusEl.textContent = "❌ Eroare server.";
     }

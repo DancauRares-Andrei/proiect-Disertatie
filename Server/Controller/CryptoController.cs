@@ -56,7 +56,7 @@ namespace SecureRiscVServer.Controller
 
             // Extragere cheie si iv 16 octeti cheie AES key + 16 octeti IV
             if (decryptedFull.Length < 32)
-                return BadRequest("Invalid AES payload");
+                return BadRequest("Date AES invalide!");
 
             byte[] decrypted = decryptedFull[^32..];
 
@@ -118,7 +118,7 @@ namespace SecureRiscVServer.Controller
                 return Unauthorized();
 
             if (request?.Instructions == null || request.Instructions.Count == 0)
-                return BadRequest("No instructions provided");
+                return BadRequest("Nu au fost furnizate instructiuni!");
 
             var parsed = new List<uint>();
 
@@ -131,7 +131,7 @@ namespace SecureRiscVServer.Controller
                 if (!uint.TryParse(clean, System.Globalization.NumberStyles.HexNumber,
                                    null, out var value))
                 {
-                    return BadRequest($"Invalid instruction: {s}");
+                    return BadRequest($"Instructiune invalida: {s}");
                 }
 
                 parsed.Add(value);

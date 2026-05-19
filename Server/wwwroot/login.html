@@ -55,25 +55,24 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Verificăm dacă utilizatorul este deja autentificat
+            // Verificare autentificare
             const token = sessionStorage.getItem("token");
             
             if (token) {
-                // Dacă e deja autentificat, redirecționăm la RISC-V
+                // Redirectionare RISC-V pentru autentificat
                 window.location.href = "riscv.html";
                 return;
             }
 
-            // Actualizăm meniul
+            // Actualizare meniu
             document.getElementById("loginMenuItem").style.display = "block";
             document.getElementById("riscvMenuItem").style.display = "none";
             document.getElementById("logoutMenuItem").style.display = "none";
 
-            // Inițializăm formularul de login
             if (typeof initLoginForm === "function") {
                 initLoginForm();
             } else {
-                console.error("initLoginForm nu este definit");
+                console.error("initLoginForm nu a fost identificat");
             }
         });
     </script>

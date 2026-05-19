@@ -5,7 +5,7 @@
     const errorBox = document.getElementById("error");
 
     if (!form) {
-        console.error("loginForm NOT FOUND");
+        console.error("loginForm nu a fost gasit");
         return;
     }
 
