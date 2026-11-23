@@ -1,0 +1,2 @@
+# proiect-Disertatie
+În cadrul acestui proiect am implementat o arhitectură client-server pentru transmiterea de mesaje într-un mod securizat. În cazul de față, sunt transmise instrucțiuni RISC-V compilate dintr-o interfață web către un client software, implementat în Python, cu PyQt6, respectiv un client hardware bazat pe un ESP8266 și un Raspberry Pi Pico. Server-ul este implementat pe platforma ASP.NET Core 8 și livrează fișiere statice html, css și js.
